@@ -37,7 +37,9 @@
       "Bash(\"C:\\Users\\XBOSS\\.config\\herd\\bin\\php.bat\" artisan make:model Checklist)",
       "Bash(\"C:\\Users\\XBOSS\\.config\\herd\\bin\\php.bat\" artisan make:migration add_background_image_to_boards_table)",
       "Bash(\"C:\\Users\\XBOSS\\.config\\herd\\bin\\php.bat\" artisan make:migration add_avatar_to_users_table)",
-      "Bash(\"C:\\Users\\XBOSS\\.config\\herd\\bin\\php.bat\" artisan migrate:rollback --step=1)"
+      "Bash(\"C:\\Users\\XBOSS\\.config\\herd\\bin\\php.bat\" artisan migrate:rollback --step=1)",
+      "Bash(move Login.tsx login.tsx)",
+      "Bash(move Register.tsx register.tsx)"
     ],
     "deny": [],
     "ask": []
