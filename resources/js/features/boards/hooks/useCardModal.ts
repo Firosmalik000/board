@@ -10,6 +10,7 @@ export function useCardModal() {
   const [newComment, setNewComment] = useState('')
   const [hasChanges, setHasChanges] = useState(false)
   const [isUploadingFile, setIsUploadingFile] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const findCard = (cardId: number, lists: any[]) => {
@@ -50,29 +51,23 @@ export function useCardModal() {
   }
 
   const handleCloseCardModal = () => {
-    // Auto-save for create mode when there's a title
-    if (cardMode === 'create' && selectedCard?.title?.trim()) {
-      router.post(
-        `/lists/${createInListId}/cards`,
-        {
-          title: selectedCard.title,
-          description: selectedCard.description,
-          category: selectedCard.category,
-          due_date: selectedCard.due_date,
-          cover_color: selectedCard.cover_color,
-        },
-        {
-          preserveScroll: true,
-          onSuccess: () => {
-            toast.success('Card created successfully')
-          },
-          onError: (errors) => {
-            toast.error(errors.title || 'Failed to create card')
-          },
-        }
-      )
-    } else if (hasChanges && cardMode === 'view') {
-      // For edit mode, ask for confirmation if there are unsaved changes
+    // Don't process if already saving (prevent double save)
+    if (isSaving) return
+
+    // For create mode: just close without saving (saving handled by button only)
+    if (cardMode === 'create') {
+      // Discard the draft
+      setSelectedCardId(null)
+      setSelectedCard(null)
+      setCardMode('view')
+      setCreateInListId(null)
+      setNewComment('')
+      setHasChanges(false)
+      return
+    }
+
+    // For edit mode: warn if there are unsaved changes
+    if (hasChanges && cardMode === 'view') {
       if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
         return
       }
@@ -93,7 +88,7 @@ export function useCardModal() {
 
   const handleSaveCard = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedCard) return
+    if (!selectedCard || isSaving) return
 
     if (cardMode === 'create') {
       if (!selectedCard.title?.trim()) {
@@ -101,6 +96,7 @@ export function useCardModal() {
         return
       }
 
+      setIsSaving(true)
       router.post(
         `/lists/${createInListId}/cards`,
         {
@@ -114,14 +110,23 @@ export function useCardModal() {
           preserveScroll: true,
           onSuccess: () => {
             toast.success('Card created successfully')
-            handleCloseCardModal()
+            setSelectedCardId(null)
+            setSelectedCard(null)
+            setCardMode('view')
+            setCreateInListId(null)
+            setNewComment('')
+            setHasChanges(false)
           },
           onError: (errors) => {
             toast.error(errors.title || 'Failed to create card')
           },
+          onFinish: () => {
+            setIsSaving(false)
+          },
         }
       )
     } else {
+      setIsSaving(true)
       router.patch(
         `/cards/${selectedCard.id}`,
         {
@@ -142,6 +147,9 @@ export function useCardModal() {
           onError: (errors) => {
             toast.error('Failed to update card')
             console.log(errors)
+          },
+          onFinish: () => {
+            setIsSaving(false)
           },
         }
       )
@@ -261,6 +269,7 @@ export function useCardModal() {
     newComment,
     hasChanges,
     isUploadingFile,
+    isSaving,
     fileInputRef,
     setNewComment,
     handleCardClick,

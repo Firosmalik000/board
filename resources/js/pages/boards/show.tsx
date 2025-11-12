@@ -27,6 +27,7 @@ export default function BoardShow({ board: initialBoard }: BoardShowProps) {
     newComment,
     hasChanges,
     isUploadingFile,
+    isSaving,
     fileInputRef,
     setNewComment,
     handleCardClick,
