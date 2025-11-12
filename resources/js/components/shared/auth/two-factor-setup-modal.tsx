@@ -1,4 +1,4 @@
-import { InputError } from '../form/input-error';
+// import { InputError } from '../form/input-error';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -20,7 +20,9 @@ import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { Check, Copy, ScanLine } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AlertError from '../form/alert-error';
-import { Spinner } from './ui/spinner';
+import { Spinner } from '@/components/ui/spinner';
+import { InputError } from '../form';
+// import { Spinner } from './ui/spinner';
 
 function GridScanIcon() {
     return (
