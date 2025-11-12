@@ -50,9 +50,34 @@ export function useCardModal() {
   }
 
   const handleCloseCardModal = () => {
-    if (hasChanges && !confirm('You have unsaved changes. Are you sure you want to close?')) {
-      return
+    // Auto-save for create mode when there's a title
+    if (cardMode === 'create' && selectedCard?.title?.trim()) {
+      router.post(
+        `/lists/${createInListId}/cards`,
+        {
+          title: selectedCard.title,
+          description: selectedCard.description,
+          category: selectedCard.category,
+          due_date: selectedCard.due_date,
+          cover_color: selectedCard.cover_color,
+        },
+        {
+          preserveScroll: true,
+          onSuccess: () => {
+            toast.success('Card created successfully')
+          },
+          onError: (errors) => {
+            toast.error(errors.title || 'Failed to create card')
+          },
+        }
+      )
+    } else if (hasChanges && cardMode === 'view') {
+      // For edit mode, ask for confirmation if there are unsaved changes
+      if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
+        return
+      }
     }
+
     setSelectedCardId(null)
     setSelectedCard(null)
     setCardMode('view')
@@ -216,11 +241,12 @@ export function useCardModal() {
   }
 
   const syncSelectedCard = (cardId: number | null, lists: any[]) => {
-    if (cardId) {
+    // Don't sync if user has unsaved changes
+    if (cardId && !hasChanges) {
       for (const list of lists || []) {
         const card = list.cards?.find((c: any) => c.id === cardId)
         if (card) {
-          setSelectedCard({ ...card, list: { id: list.id, title: list.title } })
+          setSelectedCard({ ...card, list: { id: list.id, title: list.title }, category: list.id })
           break
         }
       }
