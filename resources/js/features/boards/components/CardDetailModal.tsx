@@ -77,9 +77,17 @@ export function CardDetailModal({
   const currentUserMembership = board.members?.find((m: any) => m.id === currentUser?.id)
   const isAdmin = currentUserMembership?.pivot?.role === 'admin' || board.owner_id === currentUser?.id
 
+  // In create mode, enrich member objects with full data from board.members
+  const enrichedMembers = cardMode === 'create'
+    ? selectedCard.members?.map((m: any) => {
+        const fullMember = board.members?.find((bm: any) => bm.id === m.id)
+        return fullMember || m
+      })
+    : selectedCard.members
+
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[95vh] w-[80vw] max-w-[1400px] overflow-y-auto">
+      <DialogContent className="max-h-[95vh] w-[90vw] max-w-[1600px] overflow-y-auto">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
           <DialogHeader>
             <DialogTitle className="text-2xl">
@@ -327,9 +335,9 @@ export function CardDetailModal({
                 </Label>
                 <div className="mt-2 space-y-3">
                   {/* Assigned Members */}
-                  {selectedCard.members && selectedCard.members.length > 0 ? (
+                  {enrichedMembers && enrichedMembers.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {selectedCard.members.map((member: any) => (
+                      {enrichedMembers.map((member: any) => (
                         <div
                           key={member.id}
                           className="group relative"
@@ -338,13 +346,13 @@ export function CardDetailModal({
                           <Avatar className="h-8 w-8 cursor-pointer">
                             <AvatarFallback className="text-xs">
                               {member.name
-                                .split(' ')
+                                ?.split(' ')
                                 .map((n: string) => n[0])
                                 .join('')
-                                .toUpperCase()}
+                                .toUpperCase() || '?'}
                             </AvatarFallback>
                           </Avatar>
-                          {cardMode === 'view' && isAdmin && (
+                          {isAdmin && (
                             <button
                               onClick={() => onToggleMember(member.id)}
                               className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-destructive text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
@@ -360,8 +368,8 @@ export function CardDetailModal({
                     <p className="text-sm text-muted-foreground">No members assigned yet</p>
                   )}
 
-                  {/* Add Member Select (only in view mode and if user is admin) */}
-                  {cardMode === 'view' && isAdmin && (
+                  {/* Add Member Select - Available in both create and view mode if user is admin */}
+                  {isAdmin && (
                     <div>
                       <Label className="text-xs text-muted-foreground">Assign member</Label>
                       <Select
@@ -379,7 +387,7 @@ export function CardDetailModal({
                           {board.members
                             ?.filter(
                               (boardMember) =>
-                                !selectedCard.members?.some((cardMember: any) => cardMember.id === boardMember.id)
+                                !enrichedMembers?.some((cardMember: any) => cardMember.id === boardMember.id)
                             )
                             .map((member) => (
                               <SelectItem key={member.id} value={member.id.toString()}>
@@ -402,7 +410,7 @@ export function CardDetailModal({
                             ))}
                           {board.members?.filter(
                             (boardMember) =>
-                              !selectedCard.members?.some((cardMember: any) => cardMember.id === boardMember.id)
+                              !enrichedMembers?.some((cardMember: any) => cardMember.id === boardMember.id)
                           ).length === 0 && (
                             <div className="px-2 py-6 text-center text-sm text-muted-foreground">
                               All board members are already assigned

@@ -46,6 +46,7 @@ export function useCardModal() {
       due_date: null,
       is_completed: false,
       cover_color: '#0079bf',
+      members: [],
     })
     setHasChanges(false)
   }
@@ -105,6 +106,8 @@ export function useCardModal() {
           category: selectedCard.category,
           due_date: selectedCard.due_date,
           cover_color: selectedCard.cover_color,
+          is_completed: selectedCard.is_completed,
+          member_ids: selectedCard.members?.map((m: any) => m.id) || [],
         },
         {
           preserveScroll: true,
@@ -231,6 +234,32 @@ export function useCardModal() {
   const handleToggleMember = (userId: number) => {
     if (!selectedCard) return
 
+    // In create mode, just update the local state
+    if (cardMode === 'create') {
+      const currentMembers = selectedCard.members || []
+      const isMember = currentMembers.some((m: any) => m.id === userId)
+
+      if (isMember) {
+        // Remove member
+        setSelectedCard({
+          ...selectedCard,
+          members: currentMembers.filter((m: any) => m.id !== userId)
+        })
+        toast.success('Member removed')
+      } else {
+        // Add member - we need to get the full member object
+        // This will be handled in the CardDetailModal by finding the member from board.members
+        setSelectedCard({
+          ...selectedCard,
+          members: [...currentMembers, { id: userId }]
+        })
+        toast.success('Member added')
+      }
+      setHasChanges(true)
+      return
+    }
+
+    // In view mode, call the API
     router.post(
       `/cards/${selectedCard.id}/members/${userId}`,
       {},

@@ -25,6 +25,11 @@ class CardController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
+            'cover_color' => 'nullable|string',
+            'is_completed' => 'nullable|boolean',
+            'category' => 'nullable|string|in:' . implode(',', array_keys(Card::CATEGORIES)),
+            'member_ids' => 'nullable|array',
+            'member_ids.*' => 'exists:users,id',
         ]);
 
         // Get the highest position
@@ -35,9 +40,19 @@ class CardController extends Controller
             'title' => $request->title,
             'description' => $request->description,
             'due_date' => $request->due_date,
+            'cover_color' => $request->cover_color,
+            'is_completed' => $request->is_completed ?? false,
+            'category' => $request->category,
             'position' => $maxPosition + 1,
             'created_by' => $request->user()->id,
         ]);
+
+        // Attach members if provided
+        if ($request->has('member_ids') && is_array($request->member_ids)) {
+            foreach ($request->member_ids as $memberId) {
+                $card->members()->attach($memberId, ['assigned_at' => now()]);
+            }
+        }
 
         // Log activity
         ActivityLog::create([

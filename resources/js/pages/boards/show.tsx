@@ -99,6 +99,7 @@ export default function BoardShow({ board: initialBoard }: BoardShowProps) {
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
       }
     : {}
 

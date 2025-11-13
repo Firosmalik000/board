@@ -55,11 +55,11 @@ export function KanbanList({ list, onAddCard, onCardClick, onCreateCard, onDelet
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex w-80 shrink-0 flex-col"
+      className="flex w-80 shrink-0 flex-col max-h-full"
     >
-      <Card className="flex flex-col bg-muted/50 p-3">
+      <Card className="flex flex-col bg-muted/50 p-3 max-h-full overflow-hidden">
         {/* List Header */}
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex items-center justify-between shrink-0">
           {isEditingTitle ? (
             <Input
               value={editedTitle}
@@ -102,33 +102,35 @@ export function KanbanList({ list, onAddCard, onCardClick, onCreateCard, onDelet
           </DropdownMenu>
         </div>
 
-        {/* Cards Container */}
-        <Droppable droppableId={list.id.toString()}>
-          {(provided, snapshot) => (
-            <div
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-              className={`min-h-2 space-y-2 rounded-md transition-colors ${
-                snapshot.isDraggingOver ? 'bg-primary/5' : ''
-              }`}
-            >
-              <AnimatePresence>
-                {list.cards?.map((card, index) => (
-                  <KanbanCard
-                    key={card.id}
-                    card={card}
-                    index={index}
-                    onClick={() => onCardClick(card.id)}
-                  />
-                ))}
-              </AnimatePresence>
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
+        {/* Cards Container - Scrollable */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden pr-1">
+          <Droppable droppableId={list.id.toString()}>
+            {(provided, snapshot) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className={`min-h-2 space-y-2 rounded-md transition-colors ${
+                  snapshot.isDraggingOver ? 'bg-primary/5' : ''
+                }`}
+              >
+                <AnimatePresence>
+                  {list.cards?.map((card, index) => (
+                    <KanbanCard
+                      key={card.id}
+                      card={card}
+                      index={index}
+                      onClick={() => onCardClick(card.id)}
+                    />
+                  ))}
+                </AnimatePresence>
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </div>
 
         {/* Add Card Button */}
-        <div className="mt-2">
+        <div className="mt-2 shrink-0">
           <Button
             onClick={() => onCreateCard(list.id)}
             variant="ghost"
