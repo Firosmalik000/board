@@ -3,10 +3,11 @@ import { KanbanCard } from './KanbanCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
-import { Droppable } from '@hello-pangea/dnd'
+import { Droppable, DraggableProvidedDragHandleProps } from '@hello-pangea/dnd'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MoreVertical, Plus, X, Trash2, AlertTriangle } from 'lucide-react'
+import { MoreVertical, Plus, X, Trash2, AlertTriangle, GripVertical } from 'lucide-react'
 import { useState } from 'react'
+import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,9 +32,11 @@ interface KanbanListProps {
   onCreateCard: (listId: number) => void
   onDeleteList: (listId: number) => void
   onEditList: (listId: number, title: string) => void
+  dragHandleProps?: DraggableProvidedDragHandleProps | null
+  isDragging?: boolean
 }
 
-export function KanbanList({ list, onAddCard, onCardClick, onCreateCard, onDeleteList, onEditList }: KanbanListProps) {
+export function KanbanList({ list, onAddCard, onCardClick, onCreateCard, onDeleteList, onEditList, dragHandleProps, isDragging }: KanbanListProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editedTitle, setEditedTitle] = useState(list.title)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -57,49 +60,75 @@ export function KanbanList({ list, onAddCard, onCardClick, onCreateCard, onDelet
       exit={{ opacity: 0, x: -20 }}
       className="flex w-80 shrink-0 flex-col max-h-full"
     >
-      <Card className="flex flex-col bg-muted/50 p-3 max-h-full overflow-hidden">
+      <Card className={cn(
+        "flex flex-col bg-muted/50 p-3 max-h-full overflow-hidden transition-shadow",
+        isDragging && "shadow-xl rotate-2"
+      )}>
         {/* List Header */}
-        <div className="mb-3 flex items-center justify-between shrink-0">
-          {isEditingTitle ? (
-            <Input
-              value={editedTitle}
-              onChange={(e) => setEditedTitle(e.target.value)}
-              onBlur={handleSaveTitle}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSaveTitle()
-                if (e.key === 'Escape') {
-                  setEditedTitle(list.title)
-                  setIsEditingTitle(false)
-                }
-              }}
-              autoFocus
-              className="mr-2 h-8"
-            />
-          ) : (
-            <h3
-              className="cursor-pointer truncate font-semibold"
-              onClick={() => setIsEditingTitle(true)}
-              title={list.title}
-            >
-              {list.title}
-              <span className="ml-2 text-sm text-muted-foreground">({list.cards?.length || 0})</span>
-            </h3>
-          )}
+        <div className="mb-2 flex items-center gap-2 shrink-0">
+          {/* Drag Handle */}
+          <div
+            {...dragHandleProps}
+            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <GripVertical className="h-5 w-5" />
+          </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>Edit title</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete list
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex-1 flex items-center justify-between">
+            {isEditingTitle ? (
+              <Input
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                onBlur={handleSaveTitle}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveTitle()
+                  if (e.key === 'Escape') {
+                    setEditedTitle(list.title)
+                    setIsEditingTitle(false)
+                  }
+                }}
+                autoFocus
+                className="mr-2 h-8"
+              />
+            ) : (
+              <h3
+                className="cursor-pointer truncate font-semibold"
+                onClick={() => setIsEditingTitle(true)}
+                title={list.title}
+              >
+                {list.title}
+                <span className="ml-2 text-sm text-muted-foreground">({list.cards?.length || 0})</span>
+              </h3>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>Edit title</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete list
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Add Card Button - Moved to top */}
+        <div className="mb-2 shrink-0">
+          <Button
+            onClick={() => onCreateCard(list.id)}
+            variant="ghost"
+            className="w-full justify-start"
+            size="sm"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add a card
+          </Button>
         </div>
 
         {/* Cards Container - Scrollable */}
@@ -127,19 +156,6 @@ export function KanbanList({ list, onAddCard, onCardClick, onCreateCard, onDelet
               </div>
             )}
           </Droppable>
-        </div>
-
-        {/* Add Card Button */}
-        <div className="mt-2 shrink-0">
-          <Button
-            onClick={() => onCreateCard(list.id)}
-            variant="ghost"
-            className="w-full justify-start"
-            size="sm"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add a card
-          </Button>
         </div>
       </Card>
 

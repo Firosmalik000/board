@@ -277,6 +277,29 @@ export function useCardModal() {
     )
   }
 
+  const handleDeleteCard = () => {
+    if (!selectedCard || cardMode === 'create') return
+
+    if (!confirm('Are you sure you want to delete this card? This action cannot be undone.')) {
+      return
+    }
+
+    router.delete(`/cards/${selectedCard.id}`, {
+      preserveScroll: true,
+      onSuccess: () => {
+        toast.success('Card deleted successfully')
+        setSelectedCardId(null)
+        setSelectedCard(null)
+        setCardMode('view')
+        setNewComment('')
+        setHasChanges(false)
+      },
+      onError: () => {
+        toast.error('Failed to delete card')
+      },
+    })
+  }
+
   const syncSelectedCard = (cardId: number | null, lists: any[]) => {
     // Don't sync if user has unsaved changes
     if (cardId && !hasChanges) {
@@ -309,6 +332,7 @@ export function useCardModal() {
     handleAddComment,
     handleFileUpload,
     handleDeleteAttachment,
+    handleDeleteCard,
     handleToggleMember,
     syncSelectedCard,
   }

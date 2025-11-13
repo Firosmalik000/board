@@ -37,6 +37,7 @@ interface CardDetailModalProps {
   board: Board
   onFieldChange: (field: string, value: any) => void
   onSave: (e: React.FormEvent) => void
+  onDeleteCard?: () => void
   hasChanges: boolean
   newComment: string
   onCommentChange: (value: string) => void
@@ -57,6 +58,7 @@ export function CardDetailModal({
   board,
   onFieldChange,
   onSave,
+  onDeleteCard,
   hasChanges,
   newComment,
   onCommentChange,
@@ -460,13 +462,22 @@ export function CardDetailModal({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-2 border-t pt-4">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button onClick={onSave} disabled={cardMode === 'create' && !selectedCard.title?.trim()}>
-              {cardMode === 'create' ? 'Create Card' : 'Save Changes'}
-            </Button>
+          <div className="flex justify-between gap-2 border-t pt-4">
+            {/* Delete Button - Only in view mode */}
+            {cardMode === 'view' && onDeleteCard && (
+              <Button variant="destructive" onClick={onDeleteCard}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Card
+              </Button>
+            )}
+            <div className={`flex gap-2 ${cardMode === 'create' ? 'w-full justify-end' : 'ml-auto'}`}>
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button onClick={onSave} disabled={cardMode === 'create' && !selectedCard.title?.trim()}>
+                {cardMode === 'create' ? 'Create Card' : 'Save Changes'}
+              </Button>
+            </div>
           </div>
         </motion.div>
       </DialogContent>

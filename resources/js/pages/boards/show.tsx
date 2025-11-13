@@ -38,6 +38,7 @@ export default function BoardShow({ board: initialBoard }: BoardShowProps) {
     handleAddComment,
     handleFileUpload,
     handleDeleteAttachment,
+    handleDeleteCard,
     handleToggleMember,
     syncSelectedCard,
   } = useCardModal()
@@ -139,6 +140,7 @@ export default function BoardShow({ board: initialBoard }: BoardShowProps) {
         board={initialBoard}
         onFieldChange={handleCardFieldChange}
         onSave={handleSaveCard}
+        onDeleteCard={handleDeleteCard}
         hasChanges={hasChanges}
         newComment={newComment}
         onCommentChange={setNewComment}

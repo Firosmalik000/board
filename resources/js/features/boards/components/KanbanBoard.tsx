@@ -2,7 +2,7 @@ import { Board as BoardType } from '@/lib/store'
 import { KanbanList } from './KanbanList'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd'
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, X } from 'lucide-react'
 import { useState } from 'react'
@@ -95,15 +95,36 @@ export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard }:
   }
 
   const onDragEnd = (result: DropResult) => {
-    const { source, destination, draggableId } = result
+    const { source, destination, draggableId, type } = result
 
     if (!destination) return
 
-    // Card didn't move
+    // Nothing moved
     if (source.droppableId === destination.droppableId && source.index === destination.index) {
       return
     }
 
+    // Handle list dragging
+    if (type === 'list') {
+      const listId = parseInt(draggableId.replace('list-', ''))
+
+      router.patch(
+        `/lists/${listId}/move`,
+        {
+          position: destination.index,
+        },
+        {
+          preserveScroll: true,
+          preserveState: true,
+          onError: () => {
+            toast.error('Failed to move list')
+          },
+        }
+      )
+      return
+    }
+
+    // Handle card dragging
     const cardId = parseInt(draggableId)
     const destListId = parseInt(destination.droppableId)
 
@@ -128,27 +149,44 @@ export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard }:
       {/* Board Content */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden p-4">
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="flex h-full gap-4">
-            <AnimatePresence>
-              {board.lists?.map((list) => (
-                <KanbanList
-                  key={list.id}
-                  list={list}
-                  onAddCard={handleAddCard}
-                  onCardClick={onCardClick}
-                  onCreateCard={onCreateCard}
-                  onDeleteList={handleDeleteList}
-                  onEditList={handleEditList}
-                />
-              ))}
-            </AnimatePresence>
+          <Droppable droppableId="all-lists" direction="horizontal" type="list">
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="flex h-full gap-4"
+              >
+                <AnimatePresence>
+                  {board.lists?.map((list, index) => (
+                    <Draggable key={list.id} draggableId={`list-${list.id}`} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                        >
+                          <KanbanList
+                            list={list}
+                            onAddCard={handleAddCard}
+                            onCardClick={onCardClick}
+                            onCreateCard={onCreateCard}
+                            onDeleteList={handleDeleteList}
+                            onEditList={handleEditList}
+                            dragHandleProps={provided.dragHandleProps}
+                            isDragging={snapshot.isDragging}
+                          />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                </AnimatePresence>
+                {provided.placeholder}
 
-            {/* Add List Button */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="w-80 shrink-0"
-            >
+                {/* Add List Button */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="w-80 shrink-0"
+                >
               {isAddingList ? (
                 <div className="rounded-lg bg-muted/50 p-3">
                   <Input
@@ -192,8 +230,10 @@ export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard }:
                   Add another list
                 </Button>
               )}
-            </motion.div>
-          </div>
+                </motion.div>
+              </div>
+            )}
+          </Droppable>
         </DragDropContext>
       </div>
     </div>
