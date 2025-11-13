@@ -353,44 +353,8 @@ class WebBoardController extends Controller
     /**
      * Create a new card in a list.
      */
-    public function storeCard(Request $request, BoardList $list)
-    {
-        // Check if user has access to the board
-        if (!$list->board->hasMember($request->user())) {
-            abort(403, 'Unauthorized to access this board.');
-        }
-
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-        ]);
-
-        $position = $list->cards()->max('position') + 1;
-
-        $card = Card::create([
-            'list_id' => $list->id,
-            'title' => $validated['title'],
-            'position' => $position,
-            'created_by' => $request->user()->id,
-        ]);
-
-        // Log activity
-        ActivityLog::create([
-            'board_id' => $list->board_id,
-            'user_id' => $request->user()->id,
-            'action' => 'created',
-            'entity_type' => 'card',
-            'entity_id' => $card->id,
-        ]);
-
-        return back();
-    }
-
-    /**
-     * Update a card.
-     */
-    public function updateCard(Request $request, Card $card)
+ public function storeCard(Request $request, BoardList $list)
 {
-    // Pastikan user terautentikasi
     $user = $request->user();
     if (!$user) {
         if ($request->wantsJson()) {
@@ -399,16 +363,134 @@ class WebBoardController extends Controller
         abort(401);
     }
 
- 
-    // Pastikan card memiliki relation list & board (defensive)
-    if (!$card->relationLoaded('list')) {
-        $card->load('list.board'); // coba load relasi kalau belum di-load
-    } else {
-        if (!$card->list->relationLoaded('board')) {
-            $card->list->load('board');
+    // pastikan user adalah member board
+    $list->loadMissing('board');
+    if (!$list->board || !$list->board->hasMember($user)) {
+        if ($request->wantsJson()) {
+            return response()->json(['error' => 'Unauthorized to access this board.'], 403);
         }
+        abort(403, 'Unauthorized to access this board.');
     }
 
+    // ambil daftar list id di board sekarang (pakai $list yang sudah ada)
+    $listIds = BoardList::where('board_id', $list->board_id)->pluck('id')->toArray();
+
+    // rules termasuk category (integer dan harus salah satu list di board)
+    $rules = [
+        'title'        => 'required|string|max:255',
+        'description'  => 'nullable|string',
+        'due_date'     => 'nullable|date',
+        'cover_color'  => 'nullable|string',
+        'is_completed' => 'nullable|boolean',
+        'category'     => 'nullable|integer' . (!empty($listIds) ? '|in:' . implode(',', $listIds) : ''),
+        'member_ids'   => 'nullable|array',
+        'member_ids.*' => 'exists:users,id',
+        'checklists'   => 'nullable|string', // JSON string array
+    ];
+
+    $validator = Validator::make($request->all(), $rules);
+    if ($validator->fails()) {
+        if ($request->wantsJson()) {
+            return response()->json(['error' => 'Validation failed', 'messages' => $validator->errors()], 422);
+        }
+        return back()->withErrors($validator)->withInput();
+    }
+
+    $validated = $validator->validated();
+
+    // Increase memory limit and execution time for large files
+    ini_set('memory_limit', '512M');
+    ini_set('max_execution_time', '600');
+    ini_set('max_input_time', '600');
+
+    try {
+        DB::transaction(function () use (&$card, $validated, $list, $user, $request) {
+            // posisi baru (jika null maka mulai dari 1)
+            $position = ($list->cards()->max('position') ?? 0) + 1;
+
+            // simpan langsung category jika valid (lebih sederhana & konsisten)
+            $card = Card::create([
+                'list_id'     =>  $validated['category'] ?? $list->id,
+                'title'       => $validated['title'],
+                'description' => $validated['description'] ?? null,
+                'due_date'    => $validated['due_date'] ?? null,
+                'cover_color' => $validated['cover_color'] ?? null,
+                'is_completed'=> $validated['is_completed'] ?? false,
+                'category'    => $validated['category'] ?? null,
+                'position'    => $position,
+                'created_by'  => $user->id,
+            ]);
+
+            // Assign members
+            if (!empty($validated['member_ids'])) {
+                $card->members()->sync($validated['member_ids']);
+            }
+
+            // Create checklists
+            if (!empty($validated['checklists'])) {
+                $checklistTitles = json_decode($validated['checklists'], true);
+                if (is_array($checklistTitles)) {
+                    foreach ($checklistTitles as $title) {
+                        \App\Models\Checklist::create([
+                            'card_id' => $card->id,
+                            'title' => $title,
+                            'is_completed' => false,
+                        ]);
+                    }
+                }
+            }
+
+            // NOTE: Files will be uploaded separately via chunked upload
+            // to avoid memory issues with large files
+
+            // activity log
+            ActivityLog::create([
+                'board_id'    => $list->board_id,
+                'user_id'     => $user->id,
+                'action'      => 'created',
+                'entity_type' => 'card',
+                'entity_id'   => $card->id,
+            ]);
+        });
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'cardId' => $card->id, 'card' => $card], 201);
+        }
+        return back()->with('cardId', $card->id);
+    } catch (\Exception $e) {
+        Log::error('Failed to create card', [
+            'message' => $e->getMessage(),
+            'file'    => $e->getFile(),
+            'line'    => $e->getLine(),
+            'list_id' => $list->id,
+            'user_id' => $user->id ?? null,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['error' => 'Failed to create card', 'message' => $e->getMessage()], 500);
+        }
+        return back()->with('error', 'Failed to create card. Please try again.');
+    }
+}
+
+
+    /**
+     * Update a card.
+     */
+public function updateCard(Request $request, Card $card)
+{
+    $user = $request->user();
+    if (!$user) {
+        if ($request->wantsJson()) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+        abort(401);
+    }
+
+    // Pastikan relasi tersedia
+    $card->loadMissing('list.board');
+
+    // Authorization: pastikan user adalah member board
     if (!$card->list || !$card->list->board || !$card->list->board->hasMember($user)) {
         if ($request->wantsJson()) {
             return response()->json(['error' => 'Unauthorized to access this board.'], 403);
@@ -416,29 +498,22 @@ class WebBoardController extends Controller
         abort(403, 'Unauthorized to access this board.');
     }
 
-    // Get list IDs from the board for validation
-    $listIds = BoardList::where('board_id', $card->list->board->id)
-        ->pluck('id')
-        ->toArray();
+    // Ambil daftar list id di board untuk validasi category
+    $boardId = $card->list->board->id;
+    $listIds = BoardList::where('board_id', $boardId)->pluck('id')->toArray();
 
-    // Build rules
+    // Rules sederhana
     $rules = [
-        'title' => 'sometimes|string|max:255',
+        'title'       => 'sometimes|string|max:255',
         'description' => 'nullable|string',
-        'due_date' => 'nullable|date',
-        'is_completed' => 'sometimes|boolean',
+        'due_date'    => 'nullable|date',
+        'is_completed'=> 'sometimes|boolean',
         'cover_color' => 'nullable|string',
+        'category'    => 'nullable|integer' . (!empty($listIds) ? '|in:' . implode(',', $listIds) : ''),
     ];
 
-    // Category should be a list ID (integer)
-    if (!empty($listIds)) {
-        $rules['category'] = 'nullable|integer|in:' . implode(',', $listIds);
-    } else {
-        $rules['category'] = 'nullable|integer';
-    }
-    // Validasi input (manual agar kita bisa mengembalikan 422 tanpa exception global)
+    // Manual validator agar bisa mengembalikan 422 JSON atau redirect with errors
     $validator = Validator::make($request->all(), $rules);
-
     if ($validator->fails()) {
         if ($request->wantsJson()) {
             return response()->json([
@@ -446,101 +521,83 @@ class WebBoardController extends Controller
                 'messages' => $validator->errors(),
             ], 422);
         }
-        // Untuk Inertia/web: redirect back with errors & old input
         return back()->withErrors($validator)->withInput();
     }
 
     $validated = $validator->validated();
 
-    // Mulai transaksi
-    DB::beginTransaction();
-
     try {
-        // Simpan boardId sekarang (dipakai untuk activity log)
-        $boardId = $card->list->board_id;
+        DB::transaction(function () use (&$card, $validated, $user, $boardId) {
+            // Handle category => move card ke list lain jika diperlukan
+            if (array_key_exists('category', $validated) && $validated['category'] !== null) {
+                $targetListId = (int) $validated['category'];
 
-        // Handle category change => category is now the target list ID
-        if (isset($validated['category']) && $validated['category'] !== null) {
-            $targetListId = (int) $validated['category'];
+                if ($targetListId !== $card->list_id) {
+                    $targetList = BoardList::where('id', $targetListId)
+                        ->where('board_id', $card->list->board_id)
+                        ->first();
 
-            // Check if we need to move the card to a different list
-            if ($targetListId !== $card->list_id) {
-                $targetList = BoardList::where('id', $targetListId)
-                    ->where('board_id', $card->list->board_id)
-                    ->first();
+                    if ($targetList) {
+                        $oldListId = $card->list_id;
+                        $maxPos = $targetList->cards()->max('position');
+                        $newPosition = (is_null($maxPos) ? 0 : $maxPos) + 1;
 
-                if ($targetList) {
-                    $oldListId = $card->list_id;
-                    $maxPos = $targetList->cards()->max('position');
-                    $newPosition = (is_null($maxPos) ? 0 : $maxPos) + 1;
+                        // Shift positions di old list
+                        Card::where('list_id', $oldListId)
+                            ->where('position', '>', $card->position)
+                            ->decrement('position');
 
-                    // Decrease position of cards in old list that are after this card
-                    Card::where('list_id', $oldListId)
-                        ->where('position', '>', $card->position)
-                        ->decrement('position');
+                        // Set new list_id & position
+                        $validated['list_id'] = $targetList->id;
+                        $validated['position'] = $newPosition;
 
-                    // Update card's list and position
-                    $validated['list_id'] = $targetList->id;
-                    $validated['position'] = $newPosition;
-
-                    // Update boardId for activity log if needed
-                    $boardId = $targetList->board_id;
+                        // Update boardId untuk activity log jika board berbeda
+                        $boardId = $targetList->board_id;
+                    }
                 }
             }
-        }
 
-        // Remove category from validated data (we don't store it in the card)
-        unset($validated['category']);
+            unset($validated['category']); // tidak disimpan langsung
 
-        // Jika tidak ada list_id di validasi tetapi ada perubahan posisi (misalnya user memindahkan card),
-        // Anda mungkin punya endpoint / mekanisme terpisah untuk handle move. Di sini kami hanya pakai validated input.
-        // Pastikan fillable/guarded di model Card memperbolehkan field yang diupdate.
-        $card->fill($validated);
-        $card->save();
+            // Simpan perubahan
+            $card->fill($validated);
+            $card->save();
 
-        // Buat activity log
-        ActivityLog::create([
-            'board_id' => $boardId,
-            'user_id'  => $user->id,
-            'action'   => 'updated',
-            'entity_type' => 'card',
-            'entity_id' => $card->id,
-        ]);
-
-        DB::commit();
+            // Activity log
+            ActivityLog::create([
+                'board_id'    => $boardId,
+                'user_id'     => $user->id,
+                'action'      => 'updated',
+                'entity_type' => 'card',
+                'entity_id'   => $card->id,
+            ]);
+        });
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'card' => $card], 200);
         }
 
-        // Untuk Inertia/pages, redirect back atau ke route board show
         return back()->with('success', 'Card updated successfully.');
-    } catch (Exception $e) {
-        DB::rollBack();
-         dd($e->getMessage(), $e->getFile(), $e->getLine(), $e->getTraceAsString());
-
-
+    } catch (\Exception $e) {
         Log::error('Failed to update card', [
             'message' => $e->getMessage(),
-            'line' => $e->getLine(),
-            'file' => $e->getFile(),
-            'card_id' => $card->id,
-            'user_id' => $user->id,
+            'file'    => $e->getFile(),
+            'line'    => $e->getLine(),
+            'card_id' => $card->id ?? null,
+            'user_id' => $user->id ?? null,
         ]);
 
+        if ($request->wantsJson()) {
             return response()->json([
-                'error' => 'Failed to update card',
-                'message' => $e->getMessage(), 
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
-                'card_id' => $card->id,
-                'user_id' => $user->id,
+                'error'   => 'Failed to update card',
+                'message' => $e->getMessage(),
             ], 500);
+        }
 
-        // Untuk web, kembali dengan error flash (jangan tampilkan stack trace ke user)
         return back()->with('error', 'Failed to update card. Please try again.');
     }
 }
+
 
     /**
      * Move a card to another list.
@@ -657,6 +714,108 @@ class WebBoardController extends Controller
     }
 
     /**
+     * Upload attachment chunk (for large files)
+     */
+    public function uploadChunk(Request $request, Card $card)
+    {
+        // Check if user has access to the board
+        if (!$card->list->board->hasMember($request->user())) {
+            abort(403, 'Unauthorized to access this board.');
+        }
+
+        // Increase limits for chunk processing
+        ini_set('memory_limit', '256M');
+        ini_set('max_execution_time', '300');
+
+        // Get chunk as file upload
+        $chunk = $request->file('chunk');
+        $chunkIndex = $request->input('chunkIndex');
+        $totalChunks = $request->input('totalChunks');
+        $filename = $request->input('filename');
+        $uniqueId = $request->input('uniqueId');
+
+        // Validate all parameters exist
+        if ($chunkIndex === null || $totalChunks === null || !$filename || !$uniqueId) {
+            return response()->json(['error' => 'Missing required parameters'], 400);
+        }
+
+        // Check chunk file
+        if (!$chunk || !$chunk->isValid()) {
+            return response()->json(['error' => 'Invalid or missing chunk file'], 400);
+        }
+
+        // Create temp directory for chunks
+        $tempDir = storage_path('app/temp_chunks/' . $uniqueId);
+        if (!file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        // Save chunk
+        $chunkPath = $tempDir . '/chunk_' . $chunkIndex;
+        $chunk->move($tempDir, 'chunk_' . $chunkIndex);
+
+        // Check if all chunks received
+        $receivedChunks = count(glob($tempDir . '/chunk_*'));
+
+        if ($receivedChunks == $totalChunks) {
+            // All chunks received, merge them
+            $finalPath = storage_path('app/public/attachments');
+            if (!file_exists($finalPath)) {
+                mkdir($finalPath, 0755, true);
+            }
+
+            $finalFilename = \Illuminate\Support\Str::uuid() . '.' . pathinfo($filename, PATHINFO_EXTENSION);
+            $finalFile = $finalPath . '/' . $finalFilename;
+
+            // Merge chunks
+            $outputFile = fopen($finalFile, 'wb');
+            for ($i = 0; $i < $totalChunks; $i++) {
+                $chunkFile = fopen($tempDir . '/chunk_' . $i, 'rb');
+                stream_copy_to_stream($chunkFile, $outputFile);
+                fclose($chunkFile);
+            }
+            fclose($outputFile);
+
+            // Clean up temp directory
+            array_map('unlink', glob($tempDir . '/chunk_*'));
+            rmdir($tempDir);
+
+            // Create attachment record
+            $attachment = Attachment::create([
+                'card_id' => $card->id,
+                'uploaded_by' => $request->user()->id,
+                'filename' => $finalFilename,
+                'original_filename' => $filename,
+                'file_path' => 'attachments/' . $finalFilename,
+                'mime_type' => mime_content_type($finalFile),
+                'file_size' => filesize($finalFile),
+            ]);
+
+            // Log activity
+            ActivityLog::create([
+                'board_id' => $card->list->board_id,
+                'user_id' => $request->user()->id,
+                'action' => 'uploaded_attachment',
+                'entity_type' => 'card',
+                'entity_id' => $card->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'attachment' => $attachment,
+                'message' => 'Upload complete'
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Chunk received',
+            'received' => $receivedChunks,
+            'total' => $totalChunks
+        ]);
+    }
+
+    /**
      * Upload attachment to a card
      */
     public function uploadAttachment(Request $request, Card $card)
@@ -666,8 +825,13 @@ class WebBoardController extends Controller
             abort(403, 'Unauthorized to access this board.');
         }
 
+        // Increase memory limit and execution time for large files
+        ini_set('memory_limit', '512M');
+        ini_set('max_execution_time', '600');
+        ini_set('max_input_time', '600');
+
         $validated = $request->validate([
-            'file' => 'required|file|max:10240', // Max 10MB
+            'file' => 'required|file|max:102400', // Max 100MB
         ]);
 
         $file = $request->file('file');

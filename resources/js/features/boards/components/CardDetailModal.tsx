@@ -44,9 +44,14 @@ interface CardDetailModalProps {
   onAddComment: () => void
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onDeleteAttachment: (attachmentId: number) => void
+  onRemovePendingFile?: (index: number) => void
   onOpenPreview: (url: string, filename: string) => void
   onToggleMember: (userId: number) => void
   isUploadingFile: boolean
+  pendingFiles?: File[]
+  pendingChecklists?: string[]
+  onAddPendingChecklist?: (title: string) => void
+  onRemovePendingChecklist?: (index: number) => void
   fileInputRef: React.RefObject<HTMLInputElement>
 }
 
@@ -65,9 +70,14 @@ export function CardDetailModal({
   onAddComment,
   onFileUpload,
   onDeleteAttachment,
+  onRemovePendingFile,
   onOpenPreview,
   onToggleMember,
   isUploadingFile,
+  pendingFiles = [],
+  pendingChecklists = [],
+  onAddPendingChecklist,
+  onRemovePendingChecklist,
   fileInputRef,
 }: CardDetailModalProps) {
   if (!selectedCard) return null
@@ -135,6 +145,38 @@ export function CardDetailModal({
                 </Label>
 
                 <div className="mt-4 space-y-3">
+                  {/* Pending files (create mode only) */}
+                  {cardMode === 'create' && pendingFiles.length > 0 && (
+                    <>
+                      {pendingFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 rounded-md border border-dashed p-3 transition-colors hover:bg-muted/50"
+                        >
+                          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded border bg-muted">
+                            <FileIcon className="h-8 w-8 text-muted-foreground" />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <p className="truncate text-sm font-medium">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB • Pending upload
+                            </p>
+                          </div>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onRemovePendingFile?.(index)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Existing attachments (view mode only) */}
                   {selectedCard.attachments?.map((attachment: any) => (
                     <div
                       key={attachment.id}
@@ -207,23 +249,34 @@ export function CardDetailModal({
                       onChange={onFileUpload}
                       className="hidden"
                       accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+                      multiple
                     />
                     <Button
                       variant="outline"
                       className="w-full"
                       onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploadingFile || cardMode === 'create'}
+                      disabled={isUploadingFile}
                     >
                       <Paperclip className="mr-2 h-4 w-4" />
                       {isUploadingFile ? 'Uploading...' : 'Add Attachment'}
                     </Button>
-                    <p className="mt-1 text-xs text-muted-foreground">Max file size: 10MB</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Max file size: 100MB {cardMode === 'create' && '• Files will be uploaded when card is created'}
+                    </p>
                   </div>
                 </div>
               </div>
 
               {/* Checklist */}
-              {cardMode === 'view' && <ChecklistSection selectedCard={selectedCard} />}
+              {cardMode === 'view' ? (
+                <ChecklistSection selectedCard={selectedCard} />
+              ) : (
+                <PendingChecklistSection
+                  pendingChecklists={pendingChecklists}
+                  onAddPendingChecklist={onAddPendingChecklist}
+                  onRemovePendingChecklist={onRemovePendingChecklist}
+                />
+              )}
 
               {/* Comments - Only show in edit mode */}
               {cardMode === 'view' && (
@@ -485,7 +538,110 @@ export function CardDetailModal({
   )
 }
 
-// Checklist Section Component
+// Pending Checklist Section Component (for create mode)
+function PendingChecklistSection({
+  pendingChecklists,
+  onAddPendingChecklist,
+  onRemovePendingChecklist,
+}: {
+  pendingChecklists: string[]
+  onAddPendingChecklist?: (title: string) => void
+  onRemovePendingChecklist?: (index: number) => void
+}) {
+  const [newChecklistItem, setNewChecklistItem] = useState('')
+  const [isAdding, setIsAdding] = useState(false)
+
+  const handleAdd = () => {
+    if (!newChecklistItem.trim()) {
+      toast.error('Please enter checklist item')
+      return
+    }
+    onAddPendingChecklist?.(newChecklistItem)
+    setNewChecklistItem('')
+    setIsAdding(false)
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <Label className="text-base font-semibold">
+          <CheckSquare className="mr-2 inline h-4 w-4" />
+          Checklist
+          {pendingChecklists.length > 0 && (
+            <span className="ml-2 text-sm text-muted-foreground">
+              {pendingChecklists.length} item(s)
+            </span>
+          )}
+        </Label>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {/* Pending Checklist Items */}
+        {pendingChecklists.map((item, index) => (
+          <div
+            key={index}
+            className="group flex items-center gap-3 rounded-md border border-dashed p-3 hover:bg-muted/50 transition-colors"
+          >
+            <CheckSquare className="h-4 w-4 text-muted-foreground" />
+            <span className="flex-1 text-sm">{item}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onRemovePendingChecklist?.(index)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        ))}
+
+        {/* Add New Checklist Item */}
+        {!isAdding ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAdding(true)}
+            className="w-full"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add checklist item
+          </Button>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              value={newChecklistItem}
+              onChange={(e) => setNewChecklistItem(e.target.value)}
+              placeholder="Enter checklist item..."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAdd()
+                if (e.key === 'Escape') {
+                  setIsAdding(false)
+                  setNewChecklistItem('')
+                }
+              }}
+              autoFocus
+            />
+            <Button onClick={handleAdd} size="sm">
+              Add
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setIsAdding(false)
+                setNewChecklistItem('')
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Checklist Section Component (for view mode)
 function ChecklistSection({ selectedCard }: { selectedCard: any }) {
   const [newChecklistItem, setNewChecklistItem] = useState('')
   const [isAdding, setIsAdding] = useState(false)

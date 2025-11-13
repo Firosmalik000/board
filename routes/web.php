@@ -79,6 +79,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('cards/{card}/members/{userId}', [WebBoardController::class, 'toggleCardMember'])->name('cards.members.toggle');
 
     // Attachment routes
+    Route::post('cards/{card}/attachments/chunk', [WebBoardController::class, 'uploadChunk'])->name('cards.attachments.chunk');
     Route::post('cards/{card}/attachments', [WebBoardController::class, 'uploadAttachment'])->name('cards.attachments.upload');
     Route::delete('attachments/{attachment}', [WebBoardController::class, 'deleteAttachment'])->name('attachments.delete');
 

@@ -28,6 +28,8 @@ export default function BoardShow({ board: initialBoard }: BoardShowProps) {
     hasChanges,
     isUploadingFile,
     isSaving,
+    pendingFiles,
+    pendingChecklists,
     fileInputRef,
     setNewComment,
     handleCardClick,
@@ -38,6 +40,9 @@ export default function BoardShow({ board: initialBoard }: BoardShowProps) {
     handleAddComment,
     handleFileUpload,
     handleDeleteAttachment,
+    handleRemovePendingFile,
+    handleAddPendingChecklist,
+    handleRemovePendingChecklist,
     handleDeleteCard,
     handleToggleMember,
     syncSelectedCard,
@@ -147,9 +152,14 @@ export default function BoardShow({ board: initialBoard }: BoardShowProps) {
         onAddComment={() => handleAddComment(handleBoardUpdate)}
         onFileUpload={handleFileUpload}
         onDeleteAttachment={handleDeleteAttachment}
+        onRemovePendingFile={handleRemovePendingFile}
         onOpenPreview={handleOpenPreview}
         onToggleMember={handleToggleMember}
         isUploadingFile={isUploadingFile}
+        pendingFiles={pendingFiles}
+        pendingChecklists={pendingChecklists}
+        onAddPendingChecklist={handleAddPendingChecklist}
+        onRemovePendingChecklist={handleRemovePendingChecklist}
         fileInputRef={fileInputRef}
       />
 
