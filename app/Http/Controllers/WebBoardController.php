@@ -283,6 +283,50 @@ class WebBoardController extends Controller
     }
 
     /**
+     * Move a list (reorder position).
+     */
+    public function moveList(Request $request, BoardList $list)
+    {
+        // Check if user has access to the board
+        if (!$list->board->hasMember($request->user())) {
+            abort(403, 'Unauthorized to access this board.');
+        }
+
+        $validated = $request->validate([
+            'position' => 'required|integer|min:0',
+        ]);
+
+        $oldPosition = $list->position;
+        $newPosition = $validated['position'];
+
+        // Update positions of other lists
+        if ($newPosition < $oldPosition) {
+            // Moving left
+            BoardList::where('board_id', $list->board_id)
+                ->whereBetween('position', [$newPosition, $oldPosition - 1])
+                ->increment('position');
+        } else {
+            // Moving right
+            BoardList::where('board_id', $list->board_id)
+                ->whereBetween('position', [$oldPosition + 1, $newPosition])
+                ->decrement('position');
+        }
+
+        $list->update(['position' => $newPosition]);
+
+        // Log activity
+        ActivityLog::create([
+            'board_id' => $list->board_id,
+            'user_id' => $request->user()->id,
+            'action' => 'moved',
+            'entity_type' => 'list',
+            'entity_id' => $list->id,
+        ]);
+
+        return back();
+    }
+
+    /**
      * Delete a list.
      */
     public function destroyList(Request $request, BoardList $list)
@@ -528,6 +572,38 @@ class WebBoardController extends Controller
             'entity_type' => 'card',
             'entity_id' => $card->id,
         ]);
+
+        return back();
+    }
+
+    /**
+     * Delete a card.
+     */
+    public function destroyCard(Request $request, Card $card)
+    {
+        // Check if user has access to the board
+        if (!$card->list->board->hasMember($request->user())) {
+            abort(403, 'Unauthorized to delete this card.');
+        }
+
+        $cardTitle = $card->title;
+        $boardId = $card->list->board_id;
+
+        // Delete all attachments files from storage
+        foreach ($card->attachments as $attachment) {
+            Storage::disk('public')->delete($attachment->file_path);
+        }
+
+        // Log activity before deletion
+        ActivityLog::create([
+            'board_id' => $boardId,
+            'user_id' => $request->user()->id,
+            'action' => 'deleted',
+            'entity_type' => 'card',
+            'metadata' => ['card_title' => $cardTitle],
+        ]);
+
+        $card->delete();
 
         return back();
     }

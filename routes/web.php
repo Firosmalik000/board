@@ -68,12 +68,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // List routes
     Route::post('boards/{board}/lists', [WebBoardController::class, 'storeList'])->name('boards.lists.store');
     Route::patch('lists/{list}', [WebBoardController::class, 'updateList'])->name('lists.update');
+    Route::patch('lists/{list}/move', [WebBoardController::class, 'moveList'])->name('lists.move');
     Route::delete('lists/{list}', [WebBoardController::class, 'destroyList'])->name('lists.destroy');
 
     // Card routes
     Route::post('lists/{list}/cards', [WebBoardController::class, 'storeCard'])->name('lists.cards.store');
     Route::patch('cards/{card}', [WebBoardController::class, 'updateCard'])->name('cards.update');
     Route::patch('cards/{card}/move', [WebBoardController::class, 'moveCard'])->name('cards.move');
+    Route::delete('cards/{card}', [WebBoardController::class, 'destroyCard'])->name('cards.destroy');
     Route::post('cards/{card}/members/{userId}', [WebBoardController::class, 'toggleCardMember'])->name('cards.members.toggle');
 
     // Attachment routes
