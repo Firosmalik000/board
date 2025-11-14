@@ -64,9 +64,9 @@ export function KanbanCard({ card, index, onClick }: KanbanCardProps) {
             )}
             onClick={onClick}  
             style={{
-              // borderLeftWidth: card.cover_color ? '4px' : undefined,
-              // borderLeftColor: card.cover_color || undefined,
-              backgroundColor: card.cover_color || undefined,
+              borderLeftWidth: card.cover_color ? '6px' : undefined,
+              borderLeftColor: card.cover_color || undefined,
+              // backgroundColor: card.cover_color || undefined,
 
             }}
           >
