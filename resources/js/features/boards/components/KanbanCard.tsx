@@ -62,10 +62,12 @@ export function KanbanCard({ card, index, onClick }: KanbanCardProps) {
               'mb-2 cursor-pointer border bg-card p-3 shadow-sm transition-shadow hover:shadow-md',
               snapshot.isDragging && 'rotate-2 shadow-lg',
             )}
-            onClick={onClick}
+            onClick={onClick}  
             style={{
-              borderLeftWidth: card.cover_color ? '4px' : undefined,
-              borderLeftColor: card.cover_color || undefined,
+              // borderLeftWidth: card.cover_color ? '4px' : undefined,
+              // borderLeftColor: card.cover_color || undefined,
+              backgroundColor: card.cover_color || undefined,
+
             }}
           >
             {/* Card Title */}
@@ -77,7 +79,7 @@ export function KanbanCard({ card, index, onClick }: KanbanCardProps) {
             </div>
 
             {/* Category Badge */}
-            {hasCategory && (
+            {/* {hasCategory && (
               <div className="mb-2">
                 <Badge
                   variant="secondary"
@@ -92,7 +94,7 @@ export function KanbanCard({ card, index, onClick }: KanbanCardProps) {
                   {CATEGORY_LABELS[card.category!] || card.category}
                 </Badge>
               </div>
-            )}
+            )} */}
 
             {/* Labels */}
             {hasLabels && (
@@ -115,7 +117,7 @@ export function KanbanCard({ card, index, onClick }: KanbanCardProps) {
             )}
 
             {/* Card Footer */}
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center justify-between text-xs ">
               <div className="flex items-center gap-2">
                 {hasDeadline && (
                   <div className="flex items-center gap-1">

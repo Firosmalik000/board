@@ -99,7 +99,7 @@ export function CardDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[95vh] w-[90vw] max-w-[1600px] overflow-y-auto">
+      <DialogContent className="max-h-[95vh] min-w-[60vw] w-[1600px] overflow-y-auto">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
           <DialogHeader>
             <DialogTitle className="text-2xl">
