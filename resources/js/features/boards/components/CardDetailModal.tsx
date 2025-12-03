@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { motion } from 'framer-motion'
@@ -160,12 +161,14 @@ export function CardDetailModal({
               {/* Description */}
               <div>
                 <Label className="text-base font-semibold">Description</Label>
-                <Textarea
-                  value={selectedCard.description || ''}
-                  onChange={(e) => onFieldChange('description', e.target.value)}
-                  placeholder="Add a more detailed description..."
-                  className="mt-2 min-h-24"
-                />
+                <div className="mt-2">
+                  <RichTextEditor
+                    content={selectedCard.description || ''}
+                    onChange={(content) => onFieldChange('description', content)}
+                    placeholder="Add a more detailed description..."
+                    editable={true}
+                  />
+                </div>
               </div>
 
               {/* Attachments */}
