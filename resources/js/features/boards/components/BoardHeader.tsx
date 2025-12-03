@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
@@ -41,7 +41,6 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
   const [isLoading, setIsLoading] = useState(false)
   const [timeSinceSync, setTimeSinceSync] = useState('')
   const backgroundImageInputRef = useRef<HTMLInputElement>(null)
-
   // Check if current user is admin or owner
   const isCurrentUserAdmin = () => {
     if (!currentUser) return false
@@ -272,6 +271,7 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
               <button className="flex -space-x-2 hover:opacity-80 transition-opacity">
                 {board.members?.slice(0, 5).map((member) => (
                   <Avatar key={member.id} className="h-8 w-8 border-2 border-background">
+                    <AvatarImage src={member.avatar ? `/storage/${member.avatar}` : undefined} alt={member.name} />
                     <AvatarFallback className="text-xs">
                       {member.name
                         .split(' ')
@@ -301,6 +301,7 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
                     <div key={member.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border">
                       <div className="flex items-center gap-3 flex-1">
                         <Avatar className="h-10 w-10">
+                          <AvatarImage src={member.avatar ? `/storage/${member.avatar}` : undefined} alt={member.name} />
                           <AvatarFallback>
                             {member.name
                               .split(' ')

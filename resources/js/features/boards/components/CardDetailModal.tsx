@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { motion } from 'framer-motion'
 import { Calendar, User, Tag, MessageSquare, FolderKanban, Paperclip, Download, Trash2, Eye, UserPlus, X, CheckSquare, Plus, MoreVertical } from 'lucide-react'
 import {
@@ -289,6 +289,7 @@ export function CardDetailModal({
                     {selectedCard.comments?.map((comment: any) => (
                       <div key={comment.id} className="flex gap-3">
                         <Avatar className="h-8 w-8 mt-1">
+                          <AvatarImage src={comment.user.avatar ? `/storage/${comment.user.avatar}` : undefined} alt={comment.user.name} />
                           <AvatarFallback>
                             {comment.user.name
                               .split(' ')
@@ -399,6 +400,7 @@ export function CardDetailModal({
                           title={member.name}
                         >
                           <Avatar className="h-8 w-8 cursor-pointer">
+                            <AvatarImage src={member.avatar ? `/storage/${member.avatar}` : undefined} alt={member.name} />
                             <AvatarFallback className="text-xs">
                               {member.name
                                 ?.split(' ')
@@ -448,6 +450,7 @@ export function CardDetailModal({
                               <SelectItem key={member.id} value={member.id.toString()}>
                                 <div className="flex items-center gap-2">
                                   <Avatar className="h-6 w-6">
+                                    <AvatarImage src={member.avatar ? `/storage/${member.avatar}` : undefined} alt={member.name} />
                                     <AvatarFallback className="text-xs">
                                       {member.name
                                         .split(' ')

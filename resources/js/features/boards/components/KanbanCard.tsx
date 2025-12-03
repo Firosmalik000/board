@@ -1,6 +1,6 @@
 import { Card as CardType } from '@/lib/store'
 import { Card } from '@/components/ui/card'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Draggable } from '@hello-pangea/dnd'
 import { motion } from 'framer-motion'
 import { CheckCircle2 } from 'lucide-react'
@@ -52,6 +52,7 @@ export const KanbanCard = React.memo(({ card, index, onClick }: KanbanCardProps)
                 <div className="flex -space-x-2">
                   {card.members?.slice(0, 3).map((member) => (
                     <Avatar key={member.id} className="h-6 w-6 border-2 border-background">
+                      <AvatarImage src={member.avatar ? `/storage/${member.avatar}` : undefined} alt={member.name} />
                       <AvatarFallback className="text-xs">
                         {member.name
                           .split(' ')
