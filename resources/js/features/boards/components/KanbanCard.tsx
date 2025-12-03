@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Draggable } from '@hello-pangea/dnd'
 import { motion } from 'framer-motion'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, MessageSquare, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import React from 'react'
 
@@ -15,6 +15,8 @@ interface KanbanCardProps {
 
 export const KanbanCard = React.memo(({ card, index, onClick }: KanbanCardProps) => {
   const hasMembers = card.members && card.members.length > 0
+  const commentCount = card.comments?.length || 0
+  const hasDueDate = !!card.due_date
 
   return (
     <Draggable draggableId={card.id.toString()} index={index}>
@@ -46,8 +48,24 @@ export const KanbanCard = React.memo(({ card, index, onClick }: KanbanCardProps)
             </div>
 
             {/* Card Footer */}
-            <div className="flex items-center justify-end text-xs">
-              {/* Members */}
+            <div className="flex items-center justify-between gap-2 text-xs">
+              {/* Left side - Comment count and Due date */}
+              <div className="flex items-center gap-2 text-muted-foreground">
+                {commentCount > 0 && (
+                  <div className="flex items-center gap-1">
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    <span>{commentCount}</span>
+                  </div>
+                )}
+                {hasDueDate && (
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>{new Date(card.due_date!).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Right side - Members */}
               {hasMembers && (
                 <div className="flex -space-x-2">
                   {card.members?.slice(0, 3).map((member) => (

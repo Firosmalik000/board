@@ -39,6 +39,7 @@ interface Card {
   labels?: Label[]
   members?: User[]
   creator?: User
+  comments?: any[]
 }
 
 interface Label {
