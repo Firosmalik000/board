@@ -93,21 +93,29 @@ class WebBoardController extends Controller
         // ULTRA OPTIMIZED - Minimal data loading for maximum speed
         $board->load([
             'owner:id,name,avatar', // Minimal fields
-            'members:id,name,avatar', // Remove email for speed
+            'members:id,name,email,avatar', // Need email for mentions
             'lists' => function ($query) {
                 $query->select('id', 'board_id', 'title', 'position')
                     ->orderBy('position')
                     ->where('is_archived', false);
             },
             'lists.cards' => function ($query) {
-                $query->select('id', 'list_id', 'title', 'position', 'due_date', 'is_completed', 'cover_color', 'created_by')
+                $query->select('id', 'list_id', 'title', 'description', 'position', 'due_date', 'is_completed', 'cover_color', 'created_by')
                     ->orderBy('position')
                     ->where('is_archived', false);
             },
             'lists.cards.labels:id,name,color',
             'lists.cards.members:id,name,avatar',
-            // Remove creator, attachments, checklists from initial load
-            // Load these on-demand when card is opened
+            'lists.cards.creator:id,name,avatar',
+            'lists.cards.comments' => function ($query) {
+                $query->latest()->limit(10); // Limit to 10 most recent comments
+            },
+            'lists.cards.comments.user:id,name,avatar',
+            'lists.cards.attachments' => function ($query) {
+                $query->select('id', 'card_id', 'filename', 'original_filename', 'file_path', 'mime_type', 'file_size')
+                    ->latest()->limit(3);
+            },
+            'lists.cards.checklists:id,card_id,title,is_completed,position',
             'labels:id,name,color',
         ]);
 
