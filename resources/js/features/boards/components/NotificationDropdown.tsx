@@ -8,6 +8,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { formatDistanceToNow } from 'date-fns'
+import { useState, useEffect } from 'react'
 
 interface Activity {
   id: number
@@ -28,10 +29,38 @@ interface Activity {
 
 interface NotificationDropdownProps {
   activities: Activity[]
+  boardId: number
 }
 
-export function NotificationDropdown({ activities }: NotificationDropdownProps) {
-  const unreadCount = activities.length > 0 ? activities.slice(0, 5).length : 0
+export function NotificationDropdown({ activities, boardId }: NotificationDropdownProps) {
+  const [lastReadTime, setLastReadTime] = useState<string | null>(null)
+  const [isOpen, setIsOpen] = useState(false)
+
+  // Load last read time from localStorage on mount
+  useEffect(() => {
+    const storageKey = `board_${boardId}_last_read`
+    const savedTime = localStorage.getItem(storageKey)
+    setLastReadTime(savedTime)
+  }, [boardId])
+
+  // Calculate unread count - activities newer than last read time
+  const unreadCount = activities.filter(activity => {
+    if (!lastReadTime) return true // If never read, all are unread
+    return new Date(activity.created_at) > new Date(lastReadTime)
+  }).length
+
+  // Mark all as read when dropdown opens
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open)
+
+    if (open && activities.length > 0) {
+      // Save current timestamp as last read time
+      const now = new Date().toISOString()
+      const storageKey = `board_${boardId}_last_read`
+      localStorage.setItem(storageKey, now)
+      setLastReadTime(now)
+    }
+  }
 
   const getActivityMessage = (activity: Activity) => {
     const entityName = activity.metadata?.entity_name || activity.entity_type
@@ -155,7 +184,7 @@ export function NotificationDropdown({ activities }: NotificationDropdownProps) 
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="relative">
           <Bell className="h-4 w-4" />

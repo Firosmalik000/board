@@ -350,7 +350,7 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
           </Dialog>
 
           {/* Notification Dropdown */}
-          <NotificationDropdown activities={activities} />
+          <NotificationDropdown activities={activities} boardId={board.id} />
 
           {/* Invite Member Button - Only for Admin */}
           {isCurrentUserAdmin() && (
