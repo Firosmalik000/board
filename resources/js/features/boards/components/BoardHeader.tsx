@@ -22,6 +22,7 @@ import { MoreHorizontal, Users, Star, Archive, Trash2, UserPlus, Globe, Lock, Re
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { router, usePage } from '@inertiajs/react'
+import { NotificationDropdown } from './NotificationDropdown'
 
 interface BoardHeaderProps {
   board: Board
@@ -29,9 +30,10 @@ interface BoardHeaderProps {
   lastSyncTime?: Date
   isPolling?: boolean
   onTogglePolling?: () => void
+  activities?: any[]
 }
 
-export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onTogglePolling }: BoardHeaderProps) {
+export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onTogglePolling, activities = [] }: BoardHeaderProps) {
   const { auth } = usePage().props as any
   const currentUser = auth?.user
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false)
@@ -346,6 +348,9 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Notification Dropdown */}
+          <NotificationDropdown activities={activities} />
 
           {/* Invite Member Button - Only for Admin */}
           {isCurrentUserAdmin() && (

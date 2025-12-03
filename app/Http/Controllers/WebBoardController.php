@@ -95,8 +95,16 @@ class WebBoardController extends Controller
             'labels',
         ]);
 
+        // Get recent activities for this board
+        $activities = ActivityLog::where('board_id', $board->id)
+            ->with('user')
+            ->latest()
+            ->limit(20)
+            ->get();
+
         return Inertia::render('boards/show', [
             'board' => $board,
+            'activities' => $activities,
         ]);
     }
 
@@ -612,6 +620,10 @@ public function updateCard(Request $request, Card $card)
         $oldPosition = $card->position;
         $oldListId = $card->list_id;
 
+        // Get list names for activity log
+        $oldList = BoardList::find($oldListId);
+        $newList = BoardList::find($newListId);
+
         DB::transaction(function () use ($card, $oldListId, $oldPosition, $newListId, $newPosition) {
             if ($oldListId == $newListId) {
                 // Moving within the same list
@@ -654,6 +666,11 @@ public function updateCard(Request $request, Card $card)
             'action' => 'moved',
             'entity_type' => 'card',
             'entity_id' => $card->id,
+            'metadata' => [
+                'entity_name' => $card->title,
+                'from_list' => $oldList->title,
+                'to_list' => $newList->title,
+            ],
         ]);
 
         return back();

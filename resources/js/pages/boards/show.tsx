@@ -14,9 +14,10 @@ import {
 
 interface BoardShowProps {
   board: Board
+  activities: any[]
 }
 
-export default function BoardShow({ board: initialBoard }: BoardShowProps) {
+export default function BoardShow({ board: initialBoard, activities }: BoardShowProps) {
   const [isPolling, setIsPolling] = useState(true)
   const [lastSyncTime, setLastSyncTime] = useState(new Date())
 
@@ -126,6 +127,7 @@ export default function BoardShow({ board: initialBoard }: BoardShowProps) {
             lastSyncTime={lastSyncTime}
             isPolling={isPolling}
             onTogglePolling={() => setIsPolling(!isPolling)}
+            activities={activities || []}
           />
           <div className="flex-1 min-h-0">
             <KanbanBoard
