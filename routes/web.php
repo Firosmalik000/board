@@ -93,6 +93,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('checklists/{checklist}', [WebBoardController::class, 'updateChecklistItem'])->name('checklists.update');
     Route::delete('checklists/{checklist}', [WebBoardController::class, 'deleteChecklistItem'])->name('checklists.destroy');
 
+    // Label routes
+    Route::post('boards/{board}/labels', [WebBoardController::class, 'storeLabel'])->name('boards.labels.store');
+    Route::patch('labels/{label}', [WebBoardController::class, 'updateLabel'])->name('labels.update');
+    Route::delete('labels/{label}', [WebBoardController::class, 'destroyLabel'])->name('labels.destroy');
+    Route::post('cards/{card}/labels/{label}/attach', [WebBoardController::class, 'attachLabel'])->name('cards.labels.attach');
+    Route::delete('cards/{card}/labels/{label}/detach', [WebBoardController::class, 'detachLabel'])->name('cards.labels.detach');
+
+    // Mention routes
+    Route::get('boards/{board}/members', [WebBoardController::class, 'getBoardMembers'])->name('boards.members.list');
+
+    // Lazy loading routes (for performance)
+    Route::get('cards/{card}/comments', [WebBoardController::class, 'getCardComments'])->name('cards.comments.list');
+
     // User Profile routes
     Route::get('user/profile', [ProfileController::class, 'show'])->name('user.profile.show');
     Route::get('user/profile/activity', [ProfileController::class, 'activity'])->name('user.profile.activity');

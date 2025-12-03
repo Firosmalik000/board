@@ -27,7 +27,6 @@ class CardController extends Controller
             'due_date' => 'nullable|date',
             'cover_color' => 'nullable|string',
             'is_completed' => 'nullable|boolean',
-            'category' => 'nullable|string|in:' . implode(',', array_keys(Card::CATEGORIES)),
             'member_ids' => 'nullable|array',
             'member_ids.*' => 'exists:users,id',
         ]);
@@ -42,7 +41,6 @@ class CardController extends Controller
             'due_date' => $request->due_date,
             'cover_color' => $request->cover_color,
             'is_completed' => $request->is_completed ?? false,
-            'category' => $request->category,
             'position' => $maxPosition + 1,
             'created_by' => $request->user()->id,
         ]);
@@ -61,7 +59,7 @@ class CardController extends Controller
             'action' => 'created',
             'entity_type' => 'card',
             'entity_id' => $card->id,
-            'metadata' => ['card_title' => $card->title, 'list_title' => $list->title],
+            'metadata' => ['card_title' => $card->title, 'list_name' => $list->title],
         ]);
 
         return response()->json([
@@ -106,27 +104,44 @@ class CardController extends Controller
             'is_completed' => 'sometimes|boolean',
             'is_archived' => 'sometimes|boolean',
             'cover_color' => 'nullable|string',
-            'category' => 'nullable|string|in:' . implode(',', array_keys(Card::CATEGORIES)),
         ]);
+
+        // Track what fields are being updated
+        $changes = [];
+        $updatableFields = ['title', 'description', 'due_date', 'is_completed', 'is_archived', 'cover_color'];
+
+        foreach ($updatableFields as $field) {
+            if ($request->has($field) && $card->{$field} != $request->input($field)) {
+                $changes[] = $field;
+            }
+        }
 
         $card->update($request->only([
             'title',
             'description',
             'due_date',
             'is_completed',
-            'category',
             'is_archived',
             'cover_color',
         ]));
 
-        // Log activity
+        // Log activity with specific changes
+        $metadata = [
+            'card_title' => $card->title,
+            'list_name' => $card->list->title,
+        ];
+
+        if (!empty($changes)) {
+            $metadata['changed_fields'] = $changes;
+        }
+
         ActivityLog::create([
             'board_id' => $card->list->board_id,
             'user_id' => $request->user()->id,
             'action' => 'updated',
             'entity_type' => 'card',
             'entity_id' => $card->id,
-            'metadata' => ['card_title' => $card->title],
+            'metadata' => $metadata,
         ]);
 
         return response()->json([
@@ -191,6 +206,7 @@ class CardController extends Controller
         }
 
         $oldListId = $card->list_id;
+        $oldListTitle = $card->list->title;
         $oldPosition = $card->position;
         $newListId = $request->list_id;
         $newPosition = $request->position;
@@ -231,8 +247,8 @@ class CardController extends Controller
             'entity_id' => $card->id,
             'metadata' => [
                 'card_title' => $card->title,
-                'from_list' => $oldListId,
-                'to_list' => $newListId,
+                'from_list' => $oldListTitle,
+                'to_list' => $newList->title,
                 'from_position' => $oldPosition,
                 'to_position' => $newPosition,
             ],
@@ -256,14 +272,31 @@ class CardController extends Controller
         }
 
         $isMember = $card->members()->where('user_id', $userId)->exists();
+        $member = \App\Models\User::find($userId);
 
         if ($isMember) {
             $card->members()->detach($userId);
             $message = 'Member removed from card';
+            $action = 'unassigned_member';
         } else {
             $card->members()->attach($userId, ['assigned_at' => now()]);
             $message = 'Member added to card';
+            $action = 'assigned_member';
         }
+
+        // Log activity
+        ActivityLog::create([
+            'board_id' => $card->list->board_id,
+            'user_id' => $request->user()->id,
+            'action' => $action,
+            'entity_type' => 'card',
+            'entity_id' => $card->id,
+            'metadata' => [
+                'card_title' => $card->title,
+                'list_name' => $card->list->title,
+                'member_name' => $member ? $member->name : 'Unknown',
+            ],
+        ]);
 
         return response()->json([
             'message' => $message,

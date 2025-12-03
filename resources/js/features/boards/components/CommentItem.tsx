@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { MentionInput } from '@/components/MentionInput'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +13,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Pencil, Trash2, X, Check, Smile } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { useState, useRef, memo } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import { toast } from 'sonner'
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react'
@@ -37,9 +38,16 @@ interface Comment {
 
 interface CommentItemProps {
   comment: Comment
+  boardMembers?: Array<{
+    id: number
+    name: string
+    email: string
+    avatar: string | null
+    username: string
+  }>
 }
 
-export function CommentItem({ comment }: CommentItemProps) {
+export const CommentItem = memo(function CommentItem({ comment, boardMembers = [] }: CommentItemProps) {
   const { auth } = usePage().props as any
   const currentUser = auth?.user
   const [isEditing, setIsEditing] = useState(false)
@@ -153,26 +161,21 @@ export function CommentItem({ comment }: CommentItemProps) {
           {isEditing ? (
             <div className="space-y-2">
               <div className="relative">
-                <Textarea
-                  ref={textareaRef}
+                <MentionInput
                   value={editedContent}
-                  onChange={(e) => setEditedContent(e.target.value)}
-                  className="min-h-20 pr-10"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      handleCancelEdit()
-                    }
-                    if (e.key === 'Enter' && e.ctrlKey) {
-                      handleSaveEdit()
-                    }
-                  }}
+                  onChange={setEditedContent}
+                  members={boardMembers}
+                  placeholder="Edit comment... (Type @ to mention)"
+                  multiline={true}
+                  rows={3}
+                  className="pr-10"
                 />
                 <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="absolute right-2 top-2 h-7 w-7 p-0"
+                      className="absolute right-2 top-2 h-7 w-7 p-0 z-10"
                     >
                       <Smile className="h-4 w-4" />
                     </Button>
@@ -250,4 +253,4 @@ export function CommentItem({ comment }: CommentItemProps) {
       </AlertDialog>
     </>
   )
-}
+})

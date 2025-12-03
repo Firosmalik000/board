@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(\"C:\\Users\\XBOSS\\.config\\herd\\bin\\php.bat\" artisan tinker --execute=\"echo json_encode(\\App\\Models\\Board::with(''members'')->first()->members->toArray());\")"
+      "Bash(npm install:*)",
+      "Bash(php artisan:*)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

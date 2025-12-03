@@ -9,6 +9,8 @@ use App\Models\BoardList;
 use App\Models\Card;
 use App\Models\Checklist;
 use App\Models\Comment;
+use App\Models\Label;
+use App\Helpers\MentionHelper;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Validator;
@@ -26,9 +28,12 @@ class WebBoardController extends Controller
     {
         $user = $request->user();
 
+        // ULTRA optimized - minimal data for fast loading
         $boards = $user->allBoards()
-            ->with(['owner', 'members', 'lists'])
-            ->latest()
+            ->select('id', 'title', 'description', 'background_color', 'owner_id', 'visibility', 'updated_at')
+            ->with('owner:id,name,avatar')
+            ->withCount('lists')
+            ->latest('updated_at')
             ->get();
 
         return Inertia::render('boards/index', [
@@ -69,6 +74,7 @@ class WebBoardController extends Controller
             'action' => 'created',
             'entity_type' => 'board',
             'entity_id' => $board->id,
+            'metadata' => ['board_name' => $board->title],
         ]);
 
         return redirect()->route('boards.index');
@@ -84,24 +90,33 @@ class WebBoardController extends Controller
             abort(403, 'Unauthorized to access this board.');
         }
 
+        // ULTRA OPTIMIZED - Minimal data loading for maximum speed
         $board->load([
-            'owner',
-            'members',
-            'lists.cards.labels',
-            'lists.cards.members',
-            'lists.cards.creator',
-            'lists.cards.comments.user',
-            'lists.cards.attachments.uploader',
-            'lists.cards.checklists',
-            'labels',
+            'owner:id,name,avatar', // Minimal fields
+            'members:id,name,avatar', // Remove email for speed
+            'lists' => function ($query) {
+                $query->select('id', 'board_id', 'title', 'position')
+                    ->orderBy('position')
+                    ->where('is_archived', false);
+            },
+            'lists.cards' => function ($query) {
+                $query->select('id', 'list_id', 'title', 'position', 'due_date', 'is_completed', 'cover_color', 'created_by')
+                    ->orderBy('position')
+                    ->where('is_archived', false);
+            },
+            'lists.cards.labels:id,name,color',
+            'lists.cards.members:id,name,avatar',
+            // Remove creator, attachments, checklists from initial load
+            // Load these on-demand when card is opened
+            'labels:id,name,color',
         ]);
 
-        // Get recent activities for this board
+        // Activities: Only 10 most recent for speed
         $activities = ActivityLog::where('board_id', $board->id)
-            ->with('user')
-            ->latest()
-            ->limit(20)
-            ->get();
+            ->with('user:id,name,avatar')
+            ->latest('created_at')
+            ->limit(10)
+            ->get(['id', 'user_id', 'action', 'entity_type', 'metadata', 'created_at']);
 
         return Inertia::render('boards/show', [
             'board' => $board,
@@ -460,7 +475,26 @@ class WebBoardController extends Controller
                 'action'      => 'created',
                 'entity_type' => 'card',
                 'entity_id'   => $card->id,
+                'metadata'    => [
+                    'card_title' => $card->title,
+                    'list_name'  => $list->title,
+                ],
             ]);
+
+            // Detect and notify mentioned users in card description
+            if (!empty($card->description)) {
+                MentionHelper::createMentionNotifications(
+                    $card->description,
+                    $list->board_id,
+                    $user->id,
+                    'card',
+                    $card->id,
+                    [
+                        'card_title' => $card->title,
+                        'list_name' => $list->title,
+                    ]
+                );
+            }
         });
 
         if ($request->wantsJson()) {
@@ -538,6 +572,16 @@ public function updateCard(Request $request, Card $card)
 
     try {
         DB::transaction(function () use (&$card, $validated, $user, $boardId) {
+            // Track what fields are being changed
+            $changes = [];
+            $updatableFields = ['title', 'description', 'due_date', 'is_completed', 'cover_color', 'list_id'];
+
+            foreach ($updatableFields as $field) {
+                if (isset($validated[$field]) && $card->{$field} != $validated[$field]) {
+                    $changes[] = $field;
+                }
+            }
+
             // Handle moving card to another list if list_id is provided and different
             if (isset($validated['list_id']) && $validated['list_id'] !== $card->list_id) {
                 $targetListId = (int) $validated['list_id'];
@@ -565,14 +609,42 @@ public function updateCard(Request $request, Card $card)
             $card->fill($validated);
             $card->save();
 
-            // Activity log
+            // Refresh to get updated list relationship if list_id changed
+            $card->load('list');
+
+            // Activity log with changed fields
+            $metadata = [
+                'card_title' => $card->title,
+                'list_name' => $card->list->title,
+            ];
+
+            if (!empty($changes)) {
+                $metadata['changed_fields'] = $changes;
+            }
+
             ActivityLog::create([
                 'board_id'    => $boardId,
                 'user_id'     => $user->id,
                 'action'      => 'updated',
                 'entity_type' => 'card',
                 'entity_id'   => $card->id,
+                'metadata'    => $metadata,
             ]);
+
+            // Detect and notify mentioned users in card description
+            if (isset($validated['description']) && !empty($validated['description'])) {
+                MentionHelper::createMentionNotifications(
+                    $validated['description'],
+                    $boardId,
+                    $user->id,
+                    'card',
+                    $card->id,
+                    [
+                        'card_title' => $card->title,
+                        'list_name' => $card->list->title,
+                    ]
+                );
+            }
         });
 
         if ($request->wantsJson()) {
@@ -668,7 +740,7 @@ public function updateCard(Request $request, Card $card)
             'entity_type' => 'card',
             'entity_id' => $card->id,
             'metadata' => [
-                'entity_name' => $card->title,
+                'card_title' => $card->title,
                 'from_list' => $oldList->title,
                 'to_list' => $newList->title,
             ],
@@ -755,7 +827,11 @@ public function updateCard(Request $request, Card $card)
             'action' => $action,
             'entity_type' => 'card',
             'entity_id' => $card->id,
-            'metadata' => ['assigned_user_id' => $userId],
+            'metadata' => [
+                'card_title' => $card->title,
+                'list_name' => $card->list->title,
+                'member_name' => $userToAssign->name,
+            ],
         ]);
 
         return back()->with('success', $message);
@@ -962,8 +1038,21 @@ public function updateCard(Request $request, Card $card)
             'action' => 'commented',
             'entity_type' => 'card',
             'entity_id' => $card->id,
-            'metadata' => ['card_title' => $card->title],
+            'metadata' => ['card_title' => $card->title, 'list_name' => $card->list->title],
         ]);
+
+        // Detect and notify mentioned users
+        MentionHelper::createMentionNotifications(
+            $validated['content'],
+            $card->list->board_id,
+            $request->user()->id,
+            'comment',
+            $comment->id,
+            [
+                'card_title' => $card->title,
+                'list_name' => $card->list->title,
+            ]
+        );
 
         return back();
     }
@@ -986,6 +1075,32 @@ public function updateCard(Request $request, Card $card)
             'content' => $validated['content'],
         ]);
 
+        // Log activity
+        ActivityLog::create([
+            'board_id' => $comment->card->list->board_id,
+            'user_id' => $request->user()->id,
+            'action' => 'updated_comment',
+            'entity_type' => 'comment',
+            'entity_id' => $comment->id,
+            'metadata' => [
+                'card_title' => $comment->card->title,
+                'list_name' => $comment->card->list->title,
+            ],
+        ]);
+
+        // Detect and notify mentioned users in updated comment
+        MentionHelper::createMentionNotifications(
+            $validated['content'],
+            $comment->card->list->board_id,
+            $request->user()->id,
+            'comment',
+            $comment->id,
+            [
+                'card_title' => $comment->card->title,
+                'list_name' => $comment->card->list->title,
+            ]
+        );
+
         return back();
     }
 
@@ -998,6 +1113,22 @@ public function updateCard(Request $request, Card $card)
         if ($comment->user_id !== $request->user()->id) {
             abort(403, 'Unauthorized to delete this comment.');
         }
+
+        $cardTitle = $comment->card->title;
+        $listName = $comment->card->list->title;
+        $boardId = $comment->card->list->board_id;
+
+        // Log activity before deleting
+        ActivityLog::create([
+            'board_id' => $boardId,
+            'user_id' => $request->user()->id,
+            'action' => 'deleted_comment',
+            'entity_type' => 'comment',
+            'metadata' => [
+                'card_title' => $cardTitle,
+                'list_name' => $listName,
+            ],
+        ]);
 
         $comment->delete();
 
@@ -1234,5 +1365,202 @@ public function updateCard(Request $request, Card $card)
         $checklist->delete();
 
         return back()->with('success', 'Checklist item deleted');
+    }
+
+    /**
+     * Store a new label for the board
+     */
+    public function storeLabel(Request $request, Board $board)
+    {
+        if (!$board->hasMember($request->user())) {
+            abort(403, 'Unauthorized');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'color' => 'required|string|max:7', // hex color like #FF5733
+        ]);
+
+        $label = Label::create([
+            'board_id' => $board->id,
+            'name' => $validated['name'],
+            'color' => $validated['color'],
+        ]);
+
+        // Log activity
+        ActivityLog::create([
+            'board_id' => $board->id,
+            'user_id' => $request->user()->id,
+            'action' => 'created',
+            'entity_type' => 'label',
+            'entity_id' => $label->id,
+            'metadata' => [
+                'label_name' => $label->name,
+                'label_color' => $label->color,
+            ],
+        ]);
+
+        return back()->with('success', 'Label created successfully');
+    }
+
+    /**
+     * Update a label
+     */
+    public function updateLabel(Request $request, Label $label)
+    {
+        if (!$label->board->hasMember($request->user())) {
+            abort(403, 'Unauthorized');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'color' => 'required|string|max:7',
+        ]);
+
+        $oldName = $label->name;
+        $label->update($validated);
+
+        // Log activity
+        ActivityLog::create([
+            'board_id' => $label->board_id,
+            'user_id' => $request->user()->id,
+            'action' => 'updated',
+            'entity_type' => 'label',
+            'entity_id' => $label->id,
+            'metadata' => [
+                'label_name' => $label->name,
+                'label_color' => $label->color,
+                'old_name' => $oldName,
+            ],
+        ]);
+
+        return back()->with('success', 'Label updated successfully');
+    }
+
+    /**
+     * Delete a label
+     */
+    public function destroyLabel(Request $request, Label $label)
+    {
+        if (!$label->board->hasMember($request->user())) {
+            abort(403, 'Unauthorized');
+        }
+
+        $labelName = $label->name;
+        $boardId = $label->board_id;
+
+        // Detach from all cards first
+        $label->cards()->detach();
+
+        // Log activity
+        ActivityLog::create([
+            'board_id' => $boardId,
+            'user_id' => $request->user()->id,
+            'action' => 'deleted',
+            'entity_type' => 'label',
+            'metadata' => [
+                'label_name' => $labelName,
+            ],
+        ]);
+
+        $label->delete();
+
+        return back()->with('success', 'Label deleted successfully');
+    }
+
+    /**
+     * Attach a label to a card
+     */
+    public function attachLabel(Request $request, Card $card, Label $label)
+    {
+        if (!$card->list->board->hasMember($request->user())) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Check if label belongs to the same board
+        if ($label->board_id !== $card->list->board_id) {
+            return back()->withErrors(['label' => 'Label does not belong to this board']);
+        }
+
+        // Attach if not already attached
+        if (!$card->labels()->where('label_id', $label->id)->exists()) {
+            $card->labels()->attach($label->id);
+
+            // Log activity
+            ActivityLog::create([
+                'board_id' => $card->list->board_id,
+                'user_id' => $request->user()->id,
+                'action' => 'attached_label',
+                'entity_type' => 'card',
+                'entity_id' => $card->id,
+                'metadata' => [
+                    'card_title' => $card->title,
+                    'list_name' => $card->list->title,
+                    'label_name' => $label->name,
+                    'label_color' => $label->color,
+                ],
+            ]);
+        }
+
+        return back()->with('success', 'Label attached to card');
+    }
+
+    /**
+     * Detach a label from a card
+     */
+    public function detachLabel(Request $request, Card $card, Label $label)
+    {
+        if (!$card->list->board->hasMember($request->user())) {
+            abort(403, 'Unauthorized');
+        }
+
+        $card->labels()->detach($label->id);
+
+        // Log activity
+        ActivityLog::create([
+            'board_id' => $card->list->board_id,
+            'user_id' => $request->user()->id,
+            'action' => 'detached_label',
+            'entity_type' => 'card',
+            'entity_id' => $card->id,
+            'metadata' => [
+                'card_title' => $card->title,
+                'list_name' => $card->list->title,
+                'label_name' => $label->name,
+            ],
+        ]);
+
+        return back()->with('success', 'Label removed from card');
+    }
+
+    /**
+     * Get board members for mention autocomplete
+     */
+    public function getBoardMembers(Request $request, Board $board)
+    {
+        if (!$board->hasMember($request->user())) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $members = MentionHelper::getBoardMembersForMention($board);
+
+        return response()->json(['members' => $members]);
+    }
+
+    /**
+     * Get card comments (lazy loaded for performance)
+     */
+    public function getCardComments(Request $request, Card $card)
+    {
+        if (!$card->list->board->hasMember($request->user())) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $comments = $card->comments()
+            ->with('user:id,name,email,avatar')
+            ->latest()
+            ->get();
+
+        return response()->json(['comments' => $comments]);
     }
 }

@@ -71,23 +71,23 @@ export default function BoardShow({ board: initialBoard, activities }: BoardShow
     syncSelectedCard(selectedCardId, initialBoard.lists || [])
   }, [initialBoard, selectedCardId])
 
-  // Smart polling for real-time updates
-  useEffect(() => {
-    if (!isPolling) return
-
-    const interval = setInterval(() => {
-      router.reload({
-        only: ['board'],
-        preserveScroll: true,
-        preserveState: true,
-        onSuccess: () => {
-          setLastSyncTime(new Date())
-        },
-      })
-    }, 15000) // Poll every 15 seconds
-
-    return () => clearInterval(interval)
-  }, [isPolling])
+  // Polling DISABLED for maximum performance
+  // Users can manually refresh by clicking refresh button
+  // If you need real-time updates, consider WebSockets instead of polling
+  // useEffect(() => {
+  //   if (!isPolling) return
+  //   const interval = setInterval(() => {
+  //     router.reload({
+  //       only: ['board'],
+  //       preserveScroll: true,
+  //       preserveState: true,
+  //       onSuccess: () => {
+  //         setLastSyncTime(new Date())
+  //       },
+  //     })
+  //   }, 60000)
+  //   return () => clearInterval(interval)
+  // }, [isPolling])
 
   const breadcrumbs: BreadcrumbItem[] = [
     {

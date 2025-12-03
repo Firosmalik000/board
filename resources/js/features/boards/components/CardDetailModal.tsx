@@ -6,8 +6,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { MentionInput } from '@/components/MentionInput'
 import { motion } from 'framer-motion'
 import { Calendar, User, Tag, MessageSquare, FolderKanban, Paperclip, Download, Trash2, Eye, UserPlus, X, CheckSquare, Plus, MoreVertical, Smile } from 'lucide-react'
+import { useMemo } from 'react'
 import {
   Select,
   SelectContent,
@@ -95,6 +97,17 @@ export function CardDetailModal({
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false)
   const commentInputRef = useRef<HTMLInputElement>(null)
 
+  // Format board members for mention autocomplete (memoized for performance)
+  const boardMembers = useMemo(() => {
+    return board.members?.map((member: any) => ({
+      id: member.id,
+      name: member.name,
+      email: member.email,
+      avatar: member.avatar ? `/storage/${member.avatar}` : null,
+      username: member.email.split('@')[0], // Extract username from email
+    })) || []
+  }, [board.members])
+
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     const input = commentInputRef.current
     if (!input) return
@@ -162,11 +175,13 @@ export function CardDetailModal({
               <div>
                 <Label className="text-base font-semibold">Description</Label>
                 <div className="mt-2">
-                  <RichTextEditor
-                    content={selectedCard.description || ''}
+                  <MentionInput
+                    value={selectedCard.description || ''}
                     onChange={(content) => onFieldChange('description', content)}
-                    placeholder="Add a more detailed description..."
-                    editable={true}
+                    members={boardMembers}
+                    placeholder="Add a more detailed description... (Type @ to mention)"
+                    multiline={true}
+                    rows={6}
                   />
                 </div>
               </div>
@@ -321,18 +336,17 @@ export function CardDetailModal({
                   </Label>
                   <div className="mt-4 space-y-4">
                     {selectedCard.comments?.map((comment: any) => (
-                      <CommentItem key={comment.id} comment={comment} />
+                      <CommentItem key={comment.id} comment={comment} boardMembers={boardMembers} />
                     ))}
 
                     {/* Add Comment */}
                     <div className="flex gap-2 items-start">
                       <div className="flex-1 relative">
-                        <Input
-                          ref={commentInputRef}
+                        <MentionInput
                           value={newComment}
-                          onChange={(e) => onCommentChange(e.target.value)}
-                          placeholder="Write a comment..."
-                          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && onAddComment()}
+                          onChange={onCommentChange}
+                          members={boardMembers}
+                          placeholder="Write a comment... (Type @ to mention)"
                           className="pr-10"
                         />
                         <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>

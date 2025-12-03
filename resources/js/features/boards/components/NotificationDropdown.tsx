@@ -69,7 +69,8 @@ export function NotificationDropdown({ activities, boardId }: NotificationDropdo
     switch (activity.action) {
       case 'created':
         if (activity.entity_type === 'card' && metadata.list_name) {
-          return `created card "${entityName}" in list "${metadata.list_name}"`
+          const cardName = metadata.card_title || entityName
+          return `created card "${cardName}" in list "${metadata.list_name}"`
         }
         if (activity.entity_type === 'list') {
           return `created list "${entityName}"`
@@ -77,6 +78,20 @@ export function NotificationDropdown({ activities, boardId }: NotificationDropdo
         return `created ${activity.entity_type} "${entityName}"`
 
       case 'updated':
+        if (activity.entity_type === 'card' && metadata.changed_fields) {
+          const fields = metadata.changed_fields as string[]
+          const fieldLabels: Record<string, string> = {
+            title: 'title',
+            description: 'description',
+            due_date: 'due date',
+            is_completed: 'completion status',
+            category: 'category',
+            is_archived: 'archive status',
+            cover_color: 'cover color'
+          }
+          const changedFieldLabels = fields.map(f => fieldLabels[f] || f).join(', ')
+          return `updated ${changedFieldLabels} of card "${entityName}"${metadata.list_name ? ` in list "${metadata.list_name}"` : ''}`
+        }
         if (activity.entity_type === 'card' && metadata.list_name) {
           return `updated card "${entityName}" in list "${metadata.list_name}"`
         }
@@ -96,7 +111,8 @@ export function NotificationDropdown({ activities, boardId }: NotificationDropdo
 
       case 'moved':
         if (activity.entity_type === 'card' && metadata.from_list && metadata.to_list) {
-          return `moved card "${entityName}" from "${metadata.from_list}" to "${metadata.to_list}"`
+          const cardName = metadata.card_title || entityName
+          return `moved card "${cardName}" from "${metadata.from_list}" to "${metadata.to_list}"`
         }
         if (activity.entity_type === 'list') {
           return `reordered list "${entityName}"`
@@ -108,6 +124,18 @@ export function NotificationDropdown({ activities, boardId }: NotificationDropdo
           return `commented on card "${metadata.card_title}"`
         }
         return `commented on ${activity.entity_type} "${entityName}"`
+
+      case 'updated_comment':
+        if (metadata.card_title) {
+          return `edited a comment on card "${metadata.card_title}"`
+        }
+        return `edited a comment`
+
+      case 'deleted_comment':
+        if (metadata.card_title) {
+          return `deleted a comment from card "${metadata.card_title}"`
+        }
+        return `deleted a comment`
 
       case 'assigned_member':
         if (metadata.member_name && metadata.card_title) {
@@ -169,7 +197,40 @@ export function NotificationDropdown({ activities, boardId }: NotificationDropdo
         }
         return `deleted a checklist item`
 
+      case 'attached_label':
+        if (metadata.card_title && metadata.label_name) {
+          return `attached label "${metadata.label_name}" to card "${metadata.card_title}"`
+        }
+        return `attached a label to a card`
+
+      case 'detached_label':
+        if (metadata.card_title && metadata.label_name) {
+          return `removed label "${metadata.label_name}" from card "${metadata.card_title}"`
+        }
+        return `removed a label from a card`
+
+      case 'mentioned':
+        if (activity.entity_type === 'comment' && metadata.card_title) {
+          return `mentioned you in a comment on card "${metadata.card_title}"`
+        }
+        if (activity.entity_type === 'card' && metadata.card_title) {
+          return `mentioned you in the description of card "${metadata.card_title}"`
+        }
+        return `mentioned you`
+
       default:
+        // Handle label entity type for create/update/delete
+        if (activity.entity_type === 'label') {
+          if (activity.action === 'created' && metadata.label_name) {
+            return `created label "${metadata.label_name}"`
+          }
+          if (activity.action === 'updated' && metadata.label_name) {
+            return `updated label "${metadata.label_name}"`
+          }
+          if (activity.action === 'deleted' && metadata.label_name) {
+            return `deleted label "${metadata.label_name}"`
+          }
+        }
         return `${activity.action} ${activity.entity_type} "${entityName}"`
     }
   }
