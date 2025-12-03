@@ -296,23 +296,25 @@ class WebBoardController extends Controller
             'position' => 'required|integer|min:0',
         ]);
 
-        $oldPosition = $list->position;
-        $newPosition = $validated['position'];
+        DB::transaction(function () use ($list, $validated) {
+            $oldPosition = $list->position;
+            $newPosition = $validated['position'];
 
-        // Update positions of other lists
-        if ($newPosition < $oldPosition) {
-            // Moving left
-            BoardList::where('board_id', $list->board_id)
-                ->whereBetween('position', [$newPosition, $oldPosition - 1])
-                ->increment('position');
-        } else {
-            // Moving right
-            BoardList::where('board_id', $list->board_id)
-                ->whereBetween('position', [$oldPosition + 1, $newPosition])
-                ->decrement('position');
-        }
+            // Update positions of other lists
+            if ($newPosition < $oldPosition) {
+                // Moving left
+                BoardList::where('board_id', $list->board_id)
+                    ->whereBetween('position', [$newPosition, $oldPosition - 1])
+                    ->increment('position');
+            } else {
+                // Moving right
+                BoardList::where('board_id', $list->board_id)
+                    ->whereBetween('position', [$oldPosition + 1, $newPosition])
+                    ->decrement('position');
+            }
 
-        $list->update(['position' => $newPosition]);
+            $list->update(['position' => $newPosition]);
+        });
 
         // Log activity
         ActivityLog::create([
@@ -382,7 +384,7 @@ class WebBoardController extends Controller
         'due_date'     => 'nullable|date',
         'cover_color'  => 'nullable|string',
         'is_completed' => 'nullable|boolean',
-        'category'     => 'nullable|integer' . (!empty($listIds) ? '|in:' . implode(',', $listIds) : ''),
+        'list_id'      => 'nullable|integer' . (!empty($listIds) ? '|in:' . implode(',', $listIds) : ''),
         'member_ids'   => 'nullable|array',
         'member_ids.*' => 'exists:users,id',
         'checklists'   => 'nullable|string', // JSON string array
@@ -410,13 +412,12 @@ class WebBoardController extends Controller
 
             // simpan langsung category jika valid (lebih sederhana & konsisten)
             $card = Card::create([
-                'list_id'     =>  $validated['category'] ?? $list->id,
+                'list_id'     =>  $validated['list_id'] ?? $list->id,
                 'title'       => $validated['title'],
                 'description' => $validated['description'] ?? null,
                 'due_date'    => $validated['due_date'] ?? null,
                 'cover_color' => $validated['cover_color'] ?? null,
                 'is_completed'=> $validated['is_completed'] ?? false,
-                'category'    => $validated['category'] ?? null,
                 'position'    => $position,
                 'created_by'  => $user->id,
             ]);
@@ -498,7 +499,7 @@ public function updateCard(Request $request, Card $card)
         abort(403, 'Unauthorized to access this board.');
     }
 
-    // Ambil daftar list id di board untuk validasi category
+    // Ambil daftar list id di board untuk validasi list_id
     $boardId = $card->list->board->id;
     $listIds = BoardList::where('board_id', $boardId)->pluck('id')->toArray();
 
@@ -509,7 +510,7 @@ public function updateCard(Request $request, Card $card)
         'due_date'    => 'nullable|date',
         'is_completed'=> 'sometimes|boolean',
         'cover_color' => 'nullable|string',
-        'category'    => 'nullable|integer' . (!empty($listIds) ? '|in:' . implode(',', $listIds) : ''),
+        'list_id'     => 'nullable|integer' . (!empty($listIds) ? '|in:' . implode(',', $listIds) : ''),
     ];
 
     // Manual validator agar bisa mengembalikan 422 JSON atau redirect with errors
@@ -528,36 +529,28 @@ public function updateCard(Request $request, Card $card)
 
     try {
         DB::transaction(function () use (&$card, $validated, $user, $boardId) {
-            // Handle category => move card ke list lain jika diperlukan
-            if (array_key_exists('category', $validated) && $validated['category'] !== null) {
-                $targetListId = (int) $validated['category'];
+            // Handle moving card to another list if list_id is provided and different
+            if (isset($validated['list_id']) && $validated['list_id'] !== $card->list_id) {
+                $targetListId = (int) $validated['list_id'];
+                $targetList = BoardList::findOrFail($targetListId);
 
-                if ($targetListId !== $card->list_id) {
-                    $targetList = BoardList::where('id', $targetListId)
-                        ->where('board_id', $card->list->board_id)
-                        ->first();
+                // Ensure target list is on the same board
+                if ($targetList->board_id == $card->list->board_id) {
+                    $oldListId = $card->list_id;
+                    $newPosition = ($targetList->cards()->max('position') ?? 0) + 1;
 
-                    if ($targetList) {
-                        $oldListId = $card->list_id;
-                        $maxPos = $targetList->cards()->max('position');
-                        $newPosition = (is_null($maxPos) ? 0 : $maxPos) + 1;
+                    // Shift positions in old list
+                    Card::where('list_id', $oldListId)
+                        ->where('position', '>', $card->position)
+                        ->decrement('position');
 
-                        // Shift positions di old list
-                        Card::where('list_id', $oldListId)
-                            ->where('position', '>', $card->position)
-                            ->decrement('position');
-
-                        // Set new list_id & position
-                        $validated['list_id'] = $targetList->id;
-                        $validated['position'] = $newPosition;
-
-                        // Update boardId untuk activity log jika board berbeda
-                        $boardId = $targetList->board_id;
-                    }
+                    // Set new list_id & position
+                    $validated['position'] = $newPosition;
+                } else {
+                    // Prevent moving to a list on a different board via this method
+                    unset($validated['list_id']);
                 }
             }
-
-            unset($validated['category']); // tidak disimpan langsung
 
             // Simpan perubahan
             $card->fill($validated);
@@ -614,12 +607,45 @@ public function updateCard(Request $request, Card $card)
             'position' => 'required|integer|min:0',
         ]);
 
+        $newPosition = $validated['position'];
+        $newListId = $validated['list_id'];
+        $oldPosition = $card->position;
         $oldListId = $card->list_id;
 
-        $card->update([
-            'list_id' => $validated['list_id'],
-            'position' => $validated['position'],
-        ]);
+        DB::transaction(function () use ($card, $oldListId, $oldPosition, $newListId, $newPosition) {
+            if ($oldListId == $newListId) {
+                // Moving within the same list
+                if ($newPosition < $oldPosition) {
+                    // Moving up
+                    Card::where('list_id', $oldListId)
+                        ->whereBetween('position', [$newPosition, $oldPosition - 1])
+                        ->increment('position');
+                } else {
+                    // Moving down
+                    Card::where('list_id', $oldListId)
+                        ->whereBetween('position', [$oldPosition + 1, $newPosition])
+                        ->decrement('position');
+                }
+            } else {
+                // Moving to a different list
+                // Decrement positions in the old list
+                Card::where('list_id', $oldListId)
+                    ->where('position', '>', $oldPosition)
+                    ->decrement('position');
+
+                // Increment positions in the new list
+                Card::where('list_id', $newListId)
+                    ->where('position', '>=', $newPosition)
+                    ->increment('position');
+            }
+
+            // Update the card's position and list
+            $card->update([
+                'position' => $newPosition,
+                'list_id' => $newListId,
+            ]);
+        });
+
 
         // Log activity
         ActivityLog::create([

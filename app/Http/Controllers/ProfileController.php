@@ -108,4 +108,16 @@ class ProfileController extends Controller
 
         return back()->with('success', 'Avatar removed successfully');
     }
+
+    /**
+     * Get user activity log.
+     */
+    public function activity(Request $request)
+    {
+        $user = $request->user();
+
+        $activityLogs = $user->activityLogs()->latest()->paginate(10);
+
+        return response()->json($activityLogs);
+    }
 }

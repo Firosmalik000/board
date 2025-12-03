@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { User as UserIcon, Mail, Key, Upload, X } from 'lucide-react'
+import ActivityHistory from '@/components/profile/activity-history'
 import { toast } from 'sonner'
 import { useRef } from 'react'
 
@@ -305,6 +306,9 @@ export default function Profile({ user, statistics }: ProfileProps) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Activity History */}
+          <ActivityHistory />
         </div>
       </div>
     </AppLayout>

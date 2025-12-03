@@ -12,19 +12,6 @@ class Card extends Model
 {
     use HasFactory;
 
-    // Predefined categories
-    public const CATEGORIES = [
-        'backlog' => 'Backlog',
-        'todo' => 'To Do',
-        'in_progress' => 'In Progress',
-        'review' => 'In Review',
-        'testing' => 'Testing',
-        'done' => 'Done',
-        'bug' => 'Bug',
-        'feature' => 'Feature',
-        'improvement' => 'Improvement',
-    ];
-
     protected $fillable = [
         'list_id',
         'title',
@@ -35,7 +22,6 @@ class Card extends Model
         'is_archived',
         'cover_color',
         'cover_image',
-        'category',
         'created_by',
     ];
 

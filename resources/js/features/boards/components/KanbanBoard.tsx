@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, X } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { router } from '@inertiajs/react'
 import { toast } from 'sonner'
 
@@ -21,7 +21,7 @@ export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard }:
   const [newListTitle, setNewListTitle] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleAddList = () => {
+  const handleAddList = useCallback(() => {
     if (!newListTitle.trim()) return
 
     setIsLoading(true)
@@ -41,9 +41,9 @@ export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard }:
         onFinish: () => setIsLoading(false),
       }
     )
-  }
+  }, [board.id, newListTitle])
 
-  const handleAddCard = (listId: number, title: string) => {
+  const handleAddCard = useCallback((listId: number, title: string) => {
     setIsLoading(true)
     router.post(
       `/lists/${listId}/cards`,
@@ -59,9 +59,9 @@ export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard }:
         onFinish: () => setIsLoading(false),
       }
     )
-  }
+  }, [])
 
-  const handleDeleteList = (listId: number) => {
+  const handleDeleteList = useCallback((listId: number) => {
     // Confirmation dialog is handled in KanbanList component
     setIsLoading(true)
     router.delete(`/lists/${listId}`, {
@@ -74,9 +74,9 @@ export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard }:
       },
       onFinish: () => setIsLoading(false),
     })
-  }
+  }, [])
 
-  const handleEditList = (listId: number, title: string) => {
+  const handleEditList = useCallback((listId: number, title: string) => {
     setIsLoading(true)
     router.patch(
       `/lists/${listId}`,
@@ -92,7 +92,7 @@ export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard }:
         onFinish: () => setIsLoading(false),
       }
     )
-  }
+  }, [])
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination, draggableId, type } = result

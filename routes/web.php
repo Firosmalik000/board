@@ -93,6 +93,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // User Profile routes
     Route::get('user/profile', [ProfileController::class, 'show'])->name('user.profile.show');
+    Route::get('user/profile/activity', [ProfileController::class, 'activity'])->name('user.profile.activity');
     Route::put('user/profile', [ProfileController::class, 'update'])->name('user.profile.update');
     Route::put('user/profile/password', [ProfileController::class, 'updatePassword'])->name('user.profile.password');
     Route::post('user/profile/avatar', [ProfileController::class, 'uploadAvatar'])->name('user.profile.avatar.upload');

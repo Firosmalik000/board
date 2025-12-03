@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Droppable, DraggableProvidedDragHandleProps } from '@hello-pangea/dnd'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MoreVertical, Plus, X, Trash2, AlertTriangle, GripVertical } from 'lucide-react'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
@@ -36,7 +36,7 @@ interface KanbanListProps {
   isDragging?: boolean
 }
 
-export function KanbanList({ list, onAddCard, onCardClick, onCreateCard, onDeleteList, onEditList, dragHandleProps, isDragging }: KanbanListProps) {
+export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCard, onDeleteList, onEditList, dragHandleProps, isDragging }: KanbanListProps) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editedTitle, setEditedTitle] = useState(list.title)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -61,7 +61,7 @@ export function KanbanList({ list, onAddCard, onCardClick, onCreateCard, onDelet
       className="flex w-80 shrink-0 flex-col max-h-full"
     >
       <Card className={cn(
-        "flex flex-col bg-muted/50 p-3 max-h-full overflow-hidden transition-shadow",
+        "flex flex-col bg-muted/50 p-3 max-h-full overflow-y-auto transition-shadow",
         isDragging && "shadow-xl rotate-2"
       )}>
         {/* List Header */}
@@ -195,4 +195,4 @@ export function KanbanList({ list, onAddCard, onCardClick, onCreateCard, onDelet
       </AlertDialog>
     </motion.div>
   )
-}
+})

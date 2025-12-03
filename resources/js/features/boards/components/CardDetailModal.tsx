@@ -333,9 +333,9 @@ export function CardDetailModal({
                   Move to List
                 </Label>
                 <Select
-                  value={selectedCard.category?.toString() || selectedCard.list?.id?.toString() || 'none'}
+                  value={selectedCard.list_id?.toString() || 'none'}
                   onValueChange={(value) =>
-                    onFieldChange('category', value === 'none' ? null : parseInt(value))
+                    onFieldChange('list_id', value === 'none' ? null : parseInt(value))
                   }
                 >
                   <SelectTrigger className="mt-2 w-full">

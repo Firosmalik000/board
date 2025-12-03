@@ -1,48 +1,20 @@
 import { Card as CardType } from '@/lib/store'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Draggable } from '@hello-pangea/dnd'
 import { motion } from 'framer-motion'
-import { Calendar, CheckCircle2, MessageSquare, FolderKanban } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-const CATEGORY_COLORS: Record<string, string> = {
-  backlog: '#6B7280',
-  todo: '#3B82F6',
-  in_progress: '#F59E0B',
-  review: '#8B5CF6',
-  testing: '#EC4899',
-  done: '#10B981',
-  bug: '#EF4444',
-  feature: '#06B6D4',
-  improvement: '#14B8A6',
-}
-
-const CATEGORY_LABELS: Record<string, string> = {
-  backlog: 'Backlog',
-  todo: 'To Do',
-  in_progress: 'In Progress',
-  review: 'In Review',
-  testing: 'Testing',
-  done: 'Done',
-  bug: 'Bug',
-  feature: 'Feature',
-  improvement: 'Improvement',
-}
+import React from 'react'
 
 interface KanbanCardProps {
-  card: CardType & { comments?: any[]; category?: string }
+  card: CardType
   index: number
   onClick: () => void
 }
 
-export function KanbanCard({ card, index, onClick }: KanbanCardProps) {
-  const hasDeadline = !!card.due_date
-  const hasLabels = card.labels && card.labels.length > 0
+export const KanbanCard = React.memo(({ card, index, onClick }: KanbanCardProps) => {
   const hasMembers = card.members && card.members.length > 0
-  const hasCategory = !!card.category
-  const commentCount = card.comments?.length || 0
 
   return (
     <Draggable draggableId={card.id.toString()} index={index}>
@@ -51,23 +23,18 @@ export function KanbanCard({ card, index, onClick }: KanbanCardProps) {
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          layout
           exit={{ opacity: 0, y: -20 }}
-          whileHover={{ scale: 1.02 }}
-          transition={{ duration: 0.2 }}
         >
           <Card
             className={cn(
               'mb-2 cursor-pointer border bg-card p-3 shadow-sm transition-shadow hover:shadow-md',
               snapshot.isDragging && 'rotate-2 shadow-lg',
             )}
-            onClick={onClick}  
+            onClick={onClick}
             style={{
-              borderLeftWidth: card.cover_color ? '6px' : undefined,
+              borderLeftWidth: card.cover_color ? '6px' : '1px',
               borderLeftColor: card.cover_color || undefined,
-              // backgroundColor: card.cover_color || undefined,
-
             }}
           >
             {/* Card Title */}
@@ -78,61 +45,8 @@ export function KanbanCard({ card, index, onClick }: KanbanCardProps) {
               )}
             </div>
 
-            {/* Category Badge */}
-            {/* {hasCategory && (
-              <div className="mb-2">
-                <Badge
-                  variant="secondary"
-                  className="text-xs font-medium"
-                  style={{
-                    backgroundColor: (CATEGORY_COLORS[card.category!] || '#6B7280') + '20',
-                    borderColor: CATEGORY_COLORS[card.category!] || '#6B7280',
-                    color: CATEGORY_COLORS[card.category!] || '#6B7280',
-                  }}
-                >
-                  <FolderKanban className="mr-1 h-3 w-3" />
-                  {CATEGORY_LABELS[card.category!] || card.category}
-                </Badge>
-              </div>
-            )} */}
-
-            {/* Labels */}
-            {hasLabels && (
-              <div className="mb-2 flex flex-wrap gap-1">
-                {card.labels?.map((label) => (
-                  <Badge
-                    key={label.id}
-                    variant="secondary"
-                    className="text-xs"
-                    style={{
-                      backgroundColor: label.color + '20',
-                      borderColor: label.color,
-                      color: label.color,
-                    }}
-                  >
-                    {label.name}
-                  </Badge>
-                ))}
-              </div>
-            )}
-
             {/* Card Footer */}
-            <div className="flex items-center justify-between text-xs ">
-              <div className="flex items-center gap-2">
-                {hasDeadline && (
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    <span>{new Date(card.due_date!).toLocaleDateString()}</span>
-                  </div>
-                )}
-                {commentCount > 0 && (
-                  <div className="flex items-center gap-1">
-                    <MessageSquare className="h-3 w-3" />
-                    <span>{commentCount}</span>
-                  </div>
-                )}
-              </div>
-
+            <div className="flex items-center justify-end text-xs">
               {/* Members */}
               {hasMembers && (
                 <div className="flex -space-x-2">
@@ -160,4 +74,4 @@ export function KanbanCard({ card, index, onClick }: KanbanCardProps) {
       )}
     </Draggable>
   )
-}
+})

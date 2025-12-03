@@ -31,7 +31,7 @@ export function useCardModal() {
     setCardMode('view')
     const card = findCard(cardId, lists)
     if (card) {
-      setSelectedCard({ ...card, category: card.list.id })
+      setSelectedCard({ ...card, list_id: card.list.id })
       setHasChanges(false)
     } else {
       toast.error('Card not found')
@@ -45,7 +45,7 @@ export function useCardModal() {
     setSelectedCard({
       title: '',
       description: '',
-      category: listId,
+      list_id: listId,
       due_date: null,
       is_completed: false,
       cover_color: '#0079bf',
@@ -184,7 +184,7 @@ export function useCardModal() {
       const payload: any = {
         title: selectedCard.title,
         description: selectedCard.description,
-        category: selectedCard.category,
+        list_id: selectedCard.list_id,
         due_date: selectedCard.due_date,
         cover_color: selectedCard.cover_color,
         is_completed: selectedCard.is_completed,
@@ -227,7 +227,7 @@ export function useCardModal() {
         {
           title: selectedCard.title,
           description: selectedCard.description,
-          category: selectedCard.category,
+          list_id: selectedCard.list_id,
           due_date: selectedCard.due_date,
           is_completed: selectedCard.is_completed,
           cover_color: selectedCard.cover_color,
@@ -451,7 +451,7 @@ export function useCardModal() {
       for (const list of lists || []) {
         const card = list.cards?.find((c: any) => c.id === cardId)
         if (card) {
-          setSelectedCard({ ...card, list: { id: list.id, title: list.title }, category: list.id })
+          setSelectedCard({ ...card, list: { id: list.id, title: list.title }, list_id: list.id })
           break
         }
       }
