@@ -687,6 +687,7 @@ public function updateCard(Request $request, Card $card)
         }
 
         $cardTitle = $card->title;
+        $listName = $card->list->title;
         $boardId = $card->list->board_id;
 
         // Delete all attachments files from storage
@@ -700,7 +701,10 @@ public function updateCard(Request $request, Card $card)
             'user_id' => $request->user()->id,
             'action' => 'deleted',
             'entity_type' => 'card',
-            'metadata' => ['card_title' => $cardTitle],
+            'metadata' => [
+                'card_title' => $cardTitle,
+                'list_name' => $listName,
+            ],
         ]);
 
         $card->delete();
