@@ -145,7 +145,7 @@ export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard }:
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col h-full">
       {/* Board Content */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden p-4">
         <DragDropContext onDragEnd={onDragEnd}>

@@ -58,10 +58,10 @@ export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCa
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex w-80 shrink-0 flex-col max-h-full"
+      className="flex w-80 shrink-0 flex-col max-h-full self-start"
     >
       <Card className={cn(
-        "flex flex-col bg-muted/50 p-3 max-h-full overflow-y-auto transition-shadow",
+        "flex flex-col bg-muted/50 p-3 transition-shadow",
         isDragging && "shadow-xl rotate-2"
       )}>
         {/* List Header */}
@@ -132,7 +132,7 @@ export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCa
         </div>
 
         {/* Cards Container - Scrollable */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden pr-1">
+        <div className="overflow-y-auto overflow-x-hidden pr-1" style={{ maxHeight: 'calc(100vh - 280px)' }}>
           <Droppable droppableId={list.id.toString()}>
             {(provided, snapshot) => (
               <div

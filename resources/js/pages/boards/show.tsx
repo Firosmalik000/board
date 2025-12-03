@@ -113,13 +113,13 @@ export default function BoardShow({ board: initialBoard }: BoardShowProps) {
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title={initialBoard.title} />
 
-      <div className="flex h-full flex-col relative" style={backgroundStyle}>
+      <div className="absolute inset-0 flex flex-col overflow-hidden" style={backgroundStyle}>
         {/* Overlay for better text readability */}
         {initialBoard.background_image && (
           <div className="absolute inset-0 bg-black/20 pointer-events-none" />
         )}
 
-        <div className="relative z-10 flex h-full flex-col">
+        <div className="relative z-10 flex flex-col h-full">
           <BoardHeader
             board={initialBoard}
             onBoardUpdate={handleBoardUpdate}
@@ -127,12 +127,14 @@ export default function BoardShow({ board: initialBoard }: BoardShowProps) {
             isPolling={isPolling}
             onTogglePolling={() => setIsPolling(!isPolling)}
           />
-          <KanbanBoard
-            board={initialBoard}
-            onBoardUpdate={handleBoardUpdate}
-            onCardClick={(cardId) => handleCardClick(cardId, initialBoard.lists || [])}
-            onCreateCard={handleCreateCard}
-          />
+          <div className="flex-1 min-h-0">
+            <KanbanBoard
+              board={initialBoard}
+              onBoardUpdate={handleBoardUpdate}
+              onCardClick={(cardId) => handleCardClick(cardId, initialBoard.lists || [])}
+              onCreateCard={handleCreateCard}
+            />
+          </div>
         </div>
       </div>
 
