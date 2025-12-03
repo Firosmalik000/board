@@ -9,3 +9,6 @@ export { BoardHeader } from './BoardHeader'
 // Modals
 export { CardDetailModal } from './CardDetailModal'
 export { ImagePreviewModal } from './ImagePreviewModal'
+
+// Comment Components
+export { CommentItem } from './CommentItem'

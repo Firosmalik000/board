@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { motion } from 'framer-motion'
-import { Calendar, User, Tag, MessageSquare, FolderKanban, Paperclip, Download, Trash2, Eye, UserPlus, X, CheckSquare, Plus, MoreVertical } from 'lucide-react'
+import { Calendar, User, Tag, MessageSquare, FolderKanban, Paperclip, Download, Trash2, Eye, UserPlus, X, CheckSquare, Plus, MoreVertical, Smile } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -24,10 +24,17 @@ import { Board } from '@/lib/store'
 import { FileIcon } from 'lucide-react'
 import { usePage } from '@inertiajs/react'
 import { SharedData } from '@/types'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { router } from '@inertiajs/react'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
+import { CommentItem } from './CommentItem'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react'
 
 interface CardDetailModalProps {
   open: boolean
@@ -84,6 +91,30 @@ export function CardDetailModal({
 
   const { auth } = usePage<SharedData>().props
   const currentUser = auth?.user
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false)
+  const commentInputRef = useRef<HTMLInputElement>(null)
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    const input = commentInputRef.current
+    if (!input) return
+
+    const start = input.selectionStart || 0
+    const end = input.selectionEnd || 0
+    const text = newComment
+    const before = text.substring(0, start)
+    const after = text.substring(end, text.length)
+
+    onCommentChange(before + emojiData.emoji + after)
+    setIsEmojiPickerOpen(false)
+
+    // Set cursor position after emoji
+    setTimeout(() => {
+      if (input) {
+        input.selectionStart = input.selectionEnd = start + emojiData.emoji.length
+        input.focus()
+      }
+    }, 0)
+  }
 
   // Check if current user is admin in this board
   const currentUserMembership = board.members?.find((m: any) => m.id === currentUser?.id)
@@ -278,47 +309,48 @@ export function CardDetailModal({
                 />
               )}
 
-              {/* Comments - Only show in edit mode */}
+              {/* Comments - Only show in view mode */}
               {cardMode === 'view' && (
                 <div>
                   <Label className="text-base font-semibold">
                     <MessageSquare className="mr-2 inline h-4 w-4" />
-                    Comments
+                    Comments ({selectedCard.comments?.length || 0})
                   </Label>
                   <div className="mt-4 space-y-4">
                     {selectedCard.comments?.map((comment: any) => (
-                      <div key={comment.id} className="flex gap-3">
-                        <Avatar className="h-8 w-8 mt-1">
-                          <AvatarImage src={comment.user.avatar ? `/storage/${comment.user.avatar}` : undefined} alt={comment.user.name} />
-                          <AvatarFallback>
-                            {comment.user.name
-                              .split(' ')
-                              .map((n: string) => n[0])
-                              .join('')
-                              .toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 space-y-1">
-                          <p className="font-medium text-sm">{comment.user.name}</p>
-                          <div className="rounded-md border p-3">
-                            <p className="text-sm">{comment.content}</p>
-                          </div>
-                          <span className="text-xs text-muted-foreground pl-3">
-                            {new Date(comment.created_at).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
+                      <CommentItem key={comment.id} comment={comment} />
                     ))}
 
                     {/* Add Comment */}
-                    <div className="flex gap-2">
-                      <Input
-                        value={newComment}
-                        onChange={(e) => onCommentChange(e.target.value)}
-                        placeholder="Write a comment..."
-                        onKeyDown={(e) => e.key === 'Enter' && onAddComment()}
-                      />
-                      <Button onClick={onAddComment}>Post</Button>
+                    <div className="flex gap-2 items-start">
+                      <div className="flex-1 relative">
+                        <Input
+                          ref={commentInputRef}
+                          value={newComment}
+                          onChange={(e) => onCommentChange(e.target.value)}
+                          placeholder="Write a comment..."
+                          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && onAddComment()}
+                          className="pr-10"
+                        />
+                        <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-1 top-1 h-7 w-7 p-0"
+                              type="button"
+                            >
+                              <Smile className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0 border-0" align="end">
+                            <EmojiPicker onEmojiClick={handleEmojiClick} width={350} height={400} />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <Button onClick={onAddComment} disabled={!newComment.trim()}>
+                        Post
+                      </Button>
                     </div>
                   </div>
                 </div>

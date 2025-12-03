@@ -8,6 +8,7 @@ use App\Models\Board;
 use App\Models\BoardList;
 use App\Models\Card;
 use App\Models\Checklist;
+use App\Models\Comment;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Validator;
@@ -963,6 +964,42 @@ public function updateCard(Request $request, Card $card)
             'entity_id' => $card->id,
             'metadata' => ['card_title' => $card->title],
         ]);
+
+        return back();
+    }
+
+    /**
+     * Update a comment
+     */
+    public function updateComment(Request $request, Comment $comment)
+    {
+        // Check if user is the comment owner
+        if ($comment->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized to edit this comment.');
+        }
+
+        $validated = $request->validate([
+            'content' => 'required|string',
+        ]);
+
+        $comment->update([
+            'content' => $validated['content'],
+        ]);
+
+        return back();
+    }
+
+    /**
+     * Delete a comment
+     */
+    public function deleteComment(Request $request, Comment $comment)
+    {
+        // Check if user is the comment owner
+        if ($comment->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized to delete this comment.');
+        }
+
+        $comment->delete();
 
         return back();
     }

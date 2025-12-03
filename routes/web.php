@@ -85,6 +85,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Comment routes
     Route::post('cards/{card}/comments', [WebBoardController::class, 'addComment'])->name('cards.comments.store');
+    Route::patch('comments/{comment}', [WebBoardController::class, 'updateComment'])->name('comments.update');
+    Route::delete('comments/{comment}', [WebBoardController::class, 'deleteComment'])->name('comments.destroy');
 
     // Checklist routes
     Route::post('cards/{card}/checklists', [WebBoardController::class, 'addChecklistItem'])->name('cards.checklists.store');
