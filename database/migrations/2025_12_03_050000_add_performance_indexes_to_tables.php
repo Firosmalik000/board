@@ -15,37 +15,34 @@ return new class extends Migration
     public function up(): void
     {
         // Activity logs indexes - frequently queried by board_id and created_at
+        // Note: board_id and [entity_type, entity_id] indexes already exist from table creation
         Schema::table('activity_logs', function (Blueprint $table) {
-            $table->index('board_id'); // For filtering activities by board
             $table->index('created_at'); // For sorting by time
             $table->index(['board_id', 'created_at']); // Composite for efficient board activity queries
             $table->index('entity_type'); // For filtering by entity type
-            $table->index(['entity_type', 'entity_id']); // For finding activities for specific entities
         });
 
         // Lists indexes - frequently queried by board_id and position
+        // Note: [board_id, position] composite index already exists from table creation
         Schema::table('lists', function (Blueprint $table) {
             $table->index('board_id'); // For loading lists by board
             $table->index('position'); // For sorting lists
-            $table->index(['board_id', 'position']); // Composite for efficient board list queries
             $table->index('is_archived'); // For filtering archived lists
         });
 
         // Cards indexes - frequently queried by list_id and position
+        // Note: [list_id, position] composite and created_by indexes already exist from table creation
         Schema::table('cards', function (Blueprint $table) {
             $table->index('list_id'); // For loading cards by list
             $table->index('position'); // For sorting cards
-            $table->index(['list_id', 'position']); // Composite for efficient list card queries
-            $table->index('created_by'); // For user's cards
             $table->index('is_completed'); // For filtering completed cards
             $table->index('is_archived'); // For filtering archived cards
             $table->index('due_date'); // For sorting by due date
         });
 
         // Comments indexes - frequently queried by card_id
+        // Note: card_id and user_id indexes already exist from table creation
         Schema::table('comments', function (Blueprint $table) {
-            $table->index('card_id'); // For loading comments by card
-            $table->index('user_id'); // For user's comments
             $table->index('created_at'); // For sorting comments
         });
 
@@ -109,33 +106,26 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('activity_logs', function (Blueprint $table) {
-            $table->dropIndex(['activity_logs_board_id_index']);
             $table->dropIndex(['activity_logs_created_at_index']);
             $table->dropIndex(['activity_logs_board_id_created_at_index']);
             $table->dropIndex(['activity_logs_entity_type_index']);
-            $table->dropIndex(['activity_logs_entity_type_entity_id_index']);
         });
 
         Schema::table('lists', function (Blueprint $table) {
             $table->dropIndex(['lists_board_id_index']);
             $table->dropIndex(['lists_position_index']);
-            $table->dropIndex(['lists_board_id_position_index']);
             $table->dropIndex(['lists_is_archived_index']);
         });
 
         Schema::table('cards', function (Blueprint $table) {
             $table->dropIndex(['cards_list_id_index']);
             $table->dropIndex(['cards_position_index']);
-            $table->dropIndex(['cards_list_id_position_index']);
-            $table->dropIndex(['cards_created_by_index']);
             $table->dropIndex(['cards_is_completed_index']);
             $table->dropIndex(['cards_is_archived_index']);
             $table->dropIndex(['cards_due_date_index']);
         });
 
         Schema::table('comments', function (Blueprint $table) {
-            $table->dropIndex(['comments_card_id_index']);
-            $table->dropIndex(['comments_user_id_index']);
             $table->dropIndex(['comments_created_at_index']);
         });
 
