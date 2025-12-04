@@ -61,14 +61,12 @@ return new class extends Migration
         });
 
         // Labels indexes
-        Schema::table('labels', function (Blueprint $table) {
-            $table->index('board_id'); // For loading labels by board
-        });
+        // Note: board_id index already exists from table creation
+        // No additional indexes needed for labels table
 
         // Board members pivot table indexes
+        // Note: board_id and user_id indexes already exist from table creation
         Schema::table('board_members', function (Blueprint $table) {
-            $table->index('board_id'); // For loading members by board
-            $table->index('user_id'); // For loading boards by user
             $table->index('role'); // For filtering by role
         });
 
@@ -85,16 +83,16 @@ return new class extends Migration
         });
 
         // Boards indexes
+        // Note: owner_id and visibility indexes already exist from table creation
         Schema::table('boards', function (Blueprint $table) {
-            $table->index('owner_id'); // For loading boards by owner
-            $table->index('visibility'); // For filtering by visibility
             $table->index('is_archived'); // For filtering archived boards
         });
 
         // Invitations indexes
+        // Note: token index already exists from table creation
+        // Note: [email, status] composite exists, but we add separate email index for email-only queries
         Schema::table('invitations', function (Blueprint $table) {
             $table->index('email'); // For finding invitations by email
-            $table->index('token'); // For accepting invitations
             $table->index('board_id'); // For board's invitations
             $table->index('expires_at'); // For cleaning up expired invitations
         });
@@ -141,13 +139,9 @@ return new class extends Migration
             $table->dropIndex(['checklists_is_completed_index']);
         });
 
-        Schema::table('labels', function (Blueprint $table) {
-            $table->dropIndex(['labels_board_id_index']);
-        });
+        // Labels - no indexes to drop (all already existed)
 
         Schema::table('board_members', function (Blueprint $table) {
-            $table->dropIndex(['board_members_board_id_index']);
-            $table->dropIndex(['board_members_user_id_index']);
             $table->dropIndex(['board_members_role_index']);
         });
 
@@ -162,14 +156,11 @@ return new class extends Migration
         });
 
         Schema::table('boards', function (Blueprint $table) {
-            $table->dropIndex(['boards_owner_id_index']);
-            $table->dropIndex(['boards_visibility_index']);
             $table->dropIndex(['boards_is_archived_index']);
         });
 
         Schema::table('invitations', function (Blueprint $table) {
             $table->dropIndex(['invitations_email_index']);
-            $table->dropIndex(['invitations_token_index']);
             $table->dropIndex(['invitations_board_id_index']);
             $table->dropIndex(['invitations_expires_at_index']);
         });
