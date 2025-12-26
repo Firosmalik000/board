@@ -18,11 +18,12 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { MoreHorizontal, Users, Star, Archive, Trash2, UserPlus, Globe, Lock, RefreshCw, Image } from 'lucide-react'
+import { MoreHorizontal, Users, Star, Archive, Trash2, UserPlus, Globe, Lock, RefreshCw, Image, Filter, X } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { router, usePage } from '@inertiajs/react'
 import { NotificationDropdown } from './NotificationDropdown'
+import { cn } from '@/lib/utils'
 
 interface BoardHeaderProps {
   board: Board
@@ -31,9 +32,11 @@ interface BoardHeaderProps {
   isPolling?: boolean
   onTogglePolling?: () => void
   activities?: any[]
+  filterByUser?: number | null
+  onFilterChange?: (userId: number | null) => void
 }
 
-export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onTogglePolling, activities = [] }: BoardHeaderProps) {
+export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onTogglePolling, activities = [], filterByUser, onFilterChange }: BoardHeaderProps) {
   const { auth } = usePage().props as any
   const currentUser = auth?.user
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false)
@@ -252,7 +255,7 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
           </Badge>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {/* Sync Indicator */}
           {lastSyncTime && (
             <button
@@ -352,13 +355,74 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
           {/* Notification Dropdown */}
           <NotificationDropdown activities={activities} boardId={board.id} />
 
+          {/* Filter by Assigned User */}
+          {onFilterChange && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "gap-2 transition-all duration-200 shadow-sm",
+                    filterByUser && 'border-primary bg-primary/5 text-primary hover:bg-primary/10'
+                  )}
+                >
+                  <Filter className="h-4 w-4" />
+                  <span className="font-medium">
+                    {filterByUser
+                      ? board.members?.find(m => m.id === filterByUser)?.name?.split(' ')[0] || 'Filter'
+                      : 'Filter'}
+                  </span>
+                  {filterByUser && (
+                    <X
+                      className="h-3.5 w-3.5 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); onFilterChange(null) }}
+                    />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-1.5 text-sm font-semibold">Filter by assigned user</div>
+                <DropdownMenuSeparator />
+                {board.members?.map((member) => (
+                  <DropdownMenuItem
+                    key={member.id}
+                    onClick={() => onFilterChange(member.id)}
+                    className={filterByUser === member.id ? 'bg-accent' : ''}
+                  >
+                    <Avatar className="h-6 w-6 mr-2">
+                      <AvatarImage src={member.avatar ? `/storage/${member.avatar}` : undefined} alt={member.name} />
+                      <AvatarFallback className="text-xs">
+                        {member.name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{member.name}</span>
+                  </DropdownMenuItem>
+                ))}
+                {filterByUser && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => onFilterChange(null)}>
+                      <X className="mr-2 h-4 w-4" />
+                      Clear filter
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
           {/* Invite Member Button - Only for Admin */}
           {isCurrentUserAdmin() && (
             <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Invite
+                <Button variant="outline" size="sm" className="gap-2 shadow-sm hover:shadow transition-all">
+                  <UserPlus className="h-4 w-4" />
+                  <span className="font-medium">Invite</span>
                 </Button>
               </DialogTrigger>
             <DialogContent>

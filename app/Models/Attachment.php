@@ -21,7 +21,7 @@ class Attachment extends Model
         'file_size',
     ];
 
-    protected $appends = ['url', 'is_image'];
+    protected $appends = ['url', 'is_image', 'human_file_size'];
 
     /**
      * Get the card that owns the attachment

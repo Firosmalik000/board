@@ -34,9 +34,10 @@ interface KanbanListProps {
   onEditList: (listId: number, title: string) => void
   dragHandleProps?: DraggableProvidedDragHandleProps | null
   isDragging?: boolean
+  filterByUser?: number | null
 }
 
-export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCard, onDeleteList, onEditList, dragHandleProps, isDragging }: KanbanListProps) => {
+export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCard, onDeleteList, onEditList, dragHandleProps, isDragging, filterByUser }: KanbanListProps) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editedTitle, setEditedTitle] = useState(list.title)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -53,23 +54,31 @@ export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCa
     setShowDeleteDialog(false)
   }
 
+  // Filter cards based on assigned user
+  const filteredCards = filterByUser
+    ? list.cards?.filter(card =>
+        card.members?.some((member: any) => member.id === filterByUser)
+      ) || []
+    : list.cards || []
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.3 }}
       className="flex w-80 shrink-0 flex-col max-h-full self-start"
     >
       <Card className={cn(
-        "flex flex-col bg-muted/50 p-3 transition-shadow",
-        isDragging && "shadow-xl rotate-2"
+        "flex flex-col backdrop-blur-sm bg-background/95 border-border/50 p-4 transition-all duration-300 shadow-md hover:shadow-lg",
+        isDragging && "shadow-2xl rotate-2 scale-105 ring-2 ring-primary/30"
       )}>
         {/* List Header */}
-        <div className="mb-2 flex items-center gap-2 shrink-0">
+        <div className="mb-3 flex items-center gap-3 shrink-0">
           {/* Drag Handle */}
           <div
             {...dragHandleProps}
-            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors"
+            className="cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-primary transition-all duration-200 hover:scale-110"
           >
             <GripVertical className="h-5 w-5" />
           </div>
@@ -88,28 +97,32 @@ export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCa
                   }
                 }}
                 autoFocus
-                className="mr-2 h-8"
+                className="mr-2 h-9 font-semibold"
               />
             ) : (
               <h3
-                className="cursor-pointer truncate font-semibold"
+                className="group cursor-pointer truncate font-bold text-base flex items-center gap-2 hover:text-primary transition-colors"
                 onClick={() => setIsEditingTitle(true)}
                 title={list.title}
               >
                 {list.title}
-                <span className="ml-2 text-sm text-muted-foreground">({list.cards?.length || 0})</span>
+                <span className="inline-flex items-center justify-center min-w-[2rem] h-6 px-2 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                  {filteredCards.length}{filterByUser && list.cards?.length !== filteredCards.length ? `/${list.cards?.length}` : ''}
+                </span>
               </h3>
             )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>Edit title</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive">
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>
+                  Edit title
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive focus:text-destructive">
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete list
                 </DropdownMenuItem>
@@ -119,31 +132,32 @@ export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCa
         </div>
 
         {/* Add Card Button - Moved to top */}
-        <div className="mb-2 shrink-0">
+        <div className="mb-3 shrink-0">
           <Button
             onClick={() => onCreateCard(list.id)}
             variant="ghost"
-            className="w-full justify-start"
+            className="w-full justify-start h-9 hover:bg-primary/10 hover:text-primary transition-all duration-200 group"
             size="sm"
           >
-            <Plus className="mr-2 h-4 w-4" />
-            Add a card
+            <Plus className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+            <span className="font-medium">Add card</span>
           </Button>
         </div>
 
         {/* Cards Container - Scrollable */}
-        <div className="overflow-y-auto overflow-x-hidden pr-1" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+        <div className="overflow-y-auto overflow-x-hidden pr-1 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent" style={{ maxHeight: 'calc(100vh - 280px)' }}>
           <Droppable droppableId={list.id.toString()}>
             {(provided, snapshot) => (
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className={`min-h-2 space-y-2 rounded-md transition-colors ${
-                  snapshot.isDraggingOver ? 'bg-primary/5' : ''
-                }`}
+                className={cn(
+                  "min-h-2 rounded-lg transition-all duration-300",
+                  snapshot.isDraggingOver && 'bg-primary/5 ring-2 ring-primary/20 ring-inset'
+                )}
               >
                 <AnimatePresence>
-                  {list.cards?.map((card, index) => (
+                  {filteredCards.map((card, index) => (
                     <KanbanCard
                       key={card.id}
                       card={card}
@@ -153,6 +167,26 @@ export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCa
                   ))}
                 </AnimatePresence>
                 {provided.placeholder}
+
+                {/* Empty State */}
+                {filteredCards.length === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="flex flex-col items-center justify-center py-12 px-4 text-center"
+                  >
+                    <div className="rounded-full bg-muted/50 p-4 mb-3">
+                      <Plus className="h-8 w-8 text-muted-foreground/40" />
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground/70">
+                      {filterByUser ? 'No cards match filter' : 'No cards yet'}
+                    </p>
+                    <p className="text-xs text-muted-foreground/50 mt-1">
+                      {filterByUser ? 'Try a different filter' : 'Click "Add card" to create one'}
+                    </p>
+                  </motion.div>
+                )}
               </div>
             )}
           </Droppable>

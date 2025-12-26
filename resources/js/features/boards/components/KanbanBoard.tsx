@@ -14,9 +14,10 @@ interface KanbanBoardProps {
   onBoardUpdate: () => void
   onCardClick: (cardId: number) => void
   onCreateCard: (listId: number) => void
+  filterByUser?: number | null
 }
 
-export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard }: KanbanBoardProps) {
+export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard, filterByUser }: KanbanBoardProps) {
   const [isAddingList, setIsAddingList] = useState(false)
   const [newListTitle, setNewListTitle] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -173,6 +174,7 @@ export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard }:
                             onEditList={handleEditList}
                             dragHandleProps={provided.dragHandleProps}
                             isDragging={snapshot.isDragging}
+                            filterByUser={filterByUser}
                           />
                         </div>
                       )}

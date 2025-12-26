@@ -32,6 +32,7 @@ import { router } from '@inertiajs/react'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CommentItem } from './CommentItem'
+import { LabelManager } from './LabelManager'
 import {
   Popover,
   PopoverContent,
@@ -58,6 +59,7 @@ interface CardDetailModalProps {
   onOpenPreview: (url: string, filename: string) => void
   onToggleMember: (userId: number) => void
   isUploadingFile: boolean
+  isSaving?: boolean
   pendingFiles?: File[]
   pendingChecklists?: string[]
   onAddPendingChecklist?: (title: string) => void
@@ -84,6 +86,7 @@ export function CardDetailModal({
   onOpenPreview,
   onToggleMember,
   isUploadingFile,
+  isSaving = false,
   pendingFiles = [],
   pendingChecklists = [],
   onAddPendingChecklist,
@@ -144,15 +147,21 @@ export function CardDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[95vh] min-w-[60vw] w-[1600px] overflow-y-auto">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">
-              {cardMode === 'create' ? 'Create New Card' : selectedCard.title || 'Edit Card'}
+      <DialogContent className="max-h-[95vh] min-w-[60vw] w-[1600px] overflow-y-auto border-0 shadow-2xl bg-gradient-to-br from-background via-background to-background/95">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="space-y-6"
+        >
+          <DialogHeader className="border-b pb-5">
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+              {cardMode === 'create' ? '✨ Create New Card' : selectedCard.title || 'Edit Card'}
             </DialogTitle>
             {cardMode === 'view' && selectedCard.list && (
-              <p className="text-sm text-muted-foreground">
-                in list <span className="font-medium">{selectedCard.list?.title}</span>
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-2">
+                <span className="text-muted-foreground/50">in</span>
+                <span className="font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary">{selectedCard.list?.title}</span>
               </p>
             )}
           </DialogHeader>
@@ -161,27 +170,34 @@ export function CardDetailModal({
           <div className="grid gap-6 md:grid-cols-3">
             <div className="space-y-6 md:col-span-2">
               {/* Title */}
-              <div>
-                <Label className="text-base font-semibold">Title *</Label>
+              <div className="space-y-3">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <span className="text-primary">●</span> Title
+                  <span className="text-xs text-destructive">*</span>
+                </Label>
                 <Input
                   value={selectedCard.title || ''}
                   onChange={(e) => onFieldChange('title', e.target.value)}
-                  placeholder="Enter card title..."
-                  className="mt-2"
+                  placeholder="Enter a descriptive title for this card..."
+                  className="h-11 text-base border-border/50 focus:border-primary shadow-sm"
                 />
               </div>
 
               {/* Description */}
-              <div>
-                <Label className="text-base font-semibold">Description</Label>
-                <div className="mt-2">
-                  <MentionInput
-                    value={selectedCard.description || ''}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-primary" />
+                  Description
+                  <span className="text-xs text-muted-foreground font-normal ml-auto">
+                    Rich text editor
+                  </span>
+                </Label>
+                <div className="border border-border/50 rounded-lg overflow-hidden shadow-sm hover:border-primary/50 transition-colors bg-background">
+                  <RichTextEditor
+                    content={selectedCard.description || ''}
                     onChange={(content) => onFieldChange('description', content)}
-                    members={boardMembers}
-                    placeholder="Add a more detailed description... (Type @ to mention)"
-                    multiline={true}
-                    rows={6}
+                    placeholder="Add detailed information, requirements, or notes... Use the toolbar to format text."
+                    className="min-h-[200px]"
                   />
                 </div>
               </div>
@@ -536,20 +552,46 @@ export function CardDetailModal({
                   <Tag className="mr-2 inline h-4 w-4" />
                   Labels
                 </Label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {selectedCard.labels?.map((label: any) => (
-                    <Badge
-                      key={label.id}
-                      variant="secondary"
-                      style={{
-                        backgroundColor: label.color + '20',
-                        borderColor: label.color,
-                        color: label.color,
-                      }}
-                    >
-                      {label.name}
-                    </Badge>
-                  ))}
+                <div className="mt-2 space-y-2">
+                  {/* Attached Labels */}
+                  <div className="flex flex-wrap gap-2">
+                    {selectedCard.labels?.map((label: any) => (
+                      <Badge
+                        key={label.id}
+                        variant="secondary"
+                        className="group relative pr-6 cursor-pointer transition-all hover:opacity-80"
+                        style={{
+                          backgroundColor: label.color + '20',
+                          borderColor: label.color,
+                          color: label.color,
+                        }}
+                      >
+                        {label.name}
+                        {cardMode === 'view' && (
+                          <button
+                            onClick={() => {
+                              router.delete(`/cards/${selectedCard.id}/labels/${label.id}/detach`, {
+                                preserveScroll: true,
+                                onSuccess: () => toast.success('Label removed'),
+                                onError: () => toast.error('Failed to remove label'),
+                              })
+                            }}
+                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </Badge>
+                    ))}
+                    {selectedCard.labels?.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No labels attached</p>
+                    )}
+                  </div>
+
+                  {/* Add Label (Only in view mode) */}
+                  {cardMode === 'view' && (
+                    <LabelManager board={board} selectedCard={selectedCard} />
+                  )}
                 </div>
               </div>
 
@@ -567,20 +609,33 @@ export function CardDetailModal({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-between gap-2 border-t pt-4">
+          <div className="flex justify-between gap-3 border-t border-border/50 pt-6 mt-8">
             {/* Delete Button - Only in view mode */}
             {cardMode === 'view' && onDeleteCard && (
-              <Button variant="destructive" onClick={onDeleteCard}>
-                <Trash2 className="mr-2 h-4 w-4" />
+              <Button variant="destructive" onClick={onDeleteCard} className="gap-2 shadow-sm hover:shadow">
+                <Trash2 className="h-4 w-4" />
                 Delete Card
               </Button>
             )}
-            <div className={`flex gap-2 ${cardMode === 'create' ? 'w-full justify-end' : 'ml-auto'}`}>
-              <Button variant="outline" onClick={onClose}>
+            <div className={`flex gap-3 ${cardMode === 'create' ? 'w-full justify-end' : 'ml-auto'}`}>
+              <Button variant="outline" onClick={onClose} className="min-w-[100px] shadow-sm">
                 Cancel
               </Button>
-              <Button onClick={onSave} disabled={cardMode === 'create' && !selectedCard.title?.trim()}>
-                {cardMode === 'create' ? 'Create Card' : 'Save Changes'}
+              <Button
+                onClick={onSave}
+                disabled={(cardMode === 'create' && !selectedCard.title?.trim()) || isSaving}
+                className="min-w-[140px] gap-2 shadow-sm hover:shadow"
+              >
+                {isSaving ? (
+                  <>
+                    <span className="inline-block animate-spin">⏳</span>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    {cardMode === 'create' ? '✨ Create Card' : '💾 Save Changes'}
+                  </>
+                )}
               </Button>
             </div>
           </div>

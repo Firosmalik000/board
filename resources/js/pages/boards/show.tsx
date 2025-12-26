@@ -20,6 +20,7 @@ interface BoardShowProps {
 export default function BoardShow({ board: initialBoard, activities }: BoardShowProps) {
   const [isPolling, setIsPolling] = useState(true)
   const [lastSyncTime, setLastSyncTime] = useState(new Date())
+  const [filterByUser, setFilterByUser] = useState<number | null>(null)
 
   const {
     selectedCardId,
@@ -128,6 +129,8 @@ export default function BoardShow({ board: initialBoard, activities }: BoardShow
             isPolling={isPolling}
             onTogglePolling={() => setIsPolling(!isPolling)}
             activities={activities || []}
+            filterByUser={filterByUser}
+            onFilterChange={setFilterByUser}
           />
           <div className="flex-1 min-h-0">
             <KanbanBoard
@@ -135,6 +138,7 @@ export default function BoardShow({ board: initialBoard, activities }: BoardShow
               onBoardUpdate={handleBoardUpdate}
               onCardClick={(cardId) => handleCardClick(cardId, initialBoard.lists || [])}
               onCreateCard={handleCreateCard}
+              filterByUser={filterByUser}
             />
           </div>
         </div>
@@ -160,6 +164,7 @@ export default function BoardShow({ board: initialBoard, activities }: BoardShow
         onOpenPreview={handleOpenPreview}
         onToggleMember={handleToggleMember}
         isUploadingFile={isUploadingFile}
+        isSaving={isSaving}
         pendingFiles={pendingFiles}
         pendingChecklists={pendingChecklists}
         onAddPendingChecklist={handleAddPendingChecklist}

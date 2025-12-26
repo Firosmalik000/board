@@ -12,3 +12,6 @@ export { ImagePreviewModal } from './ImagePreviewModal'
 
 // Comment Components
 export { CommentItem } from './CommentItem'
+
+// Label Components
+export { LabelManager } from './LabelManager'

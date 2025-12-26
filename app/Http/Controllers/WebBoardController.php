@@ -454,8 +454,11 @@ class WebBoardController extends Controller
                 'created_by'  => $user->id,
             ]);
 
-            // Assign members
+            // Assign members (only admins can assign members to cards)
             if (!empty($validated['member_ids'])) {
+                if (!$list->board->isAdmin($user)) {
+                    throw new \Exception('Only board admins can assign members to cards.');
+                }
                 $card->members()->sync($validated['member_ids']);
             }
 

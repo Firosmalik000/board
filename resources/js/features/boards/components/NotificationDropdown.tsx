@@ -80,17 +80,46 @@ export function NotificationDropdown({ activities, boardId }: NotificationDropdo
       case 'updated':
         if (activity.entity_type === 'card' && metadata.changed_fields) {
           const fields = metadata.changed_fields as string[]
+
+          // Handle list_id change specially - it's a move action
+          if (fields.includes('list_id') && fields.length === 1) {
+            return `moved card "${metadata.card_title || entityName}"${metadata.list_name ? ` to list "${metadata.list_name}"` : ''}`
+          }
+
           const fieldLabels: Record<string, string> = {
             title: 'title',
             description: 'description',
             due_date: 'due date',
             is_completed: 'completion status',
+            list_id: 'list',
             category: 'category',
             is_archived: 'archive status',
-            cover_color: 'cover color'
+            cover_color: 'cover color',
+            position: 'position',
+            member_ids: 'assigned members'
           }
-          const changedFieldLabels = fields.map(f => fieldLabels[f] || f).join(', ')
-          return `updated ${changedFieldLabels} of card "${entityName}"${metadata.list_name ? ` in list "${metadata.list_name}"` : ''}`
+
+          // Filter out list_id if there are other changes (show it separately)
+          const fieldsToShow = fields.filter(f => f !== 'list_id' && f !== 'position')
+
+          if (fieldsToShow.length === 0 && fields.includes('list_id')) {
+            return `moved card "${metadata.card_title || entityName}"${metadata.list_name ? ` to list "${metadata.list_name}"` : ''}`
+          }
+
+          const changedFieldLabels = fieldsToShow.map(f => fieldLabels[f] || f).join(', ')
+          let message = `updated ${changedFieldLabels} of card "${metadata.card_title || entityName}"`
+
+          // Add list info if available
+          if (metadata.list_name) {
+            message += ` in list "${metadata.list_name}"`
+          }
+
+          // If list was also changed, mention it
+          if (fields.includes('list_id') && fieldsToShow.length > 0) {
+            message += ' and moved it to another list'
+          }
+
+          return message
         }
         if (activity.entity_type === 'card' && metadata.list_name) {
           return `updated card "${entityName}" in list "${metadata.list_name}"`
