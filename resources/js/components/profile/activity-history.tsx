@@ -66,13 +66,15 @@ export default function ActivityHistory() {
   }
 
   return (
-    <Card className="md:col-span-2">
+    <Card className="border-2 hover:border-orange-500/50 transition-colors">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Activity className="h-5 w-5" />
+        <CardTitle className="flex items-center gap-2 text-2xl">
+          <div className="p-2 rounded-lg bg-orange-500/10">
+            <Activity className="h-5 w-5 text-orange-500" />
+          </div>
           Activity History
         </CardTitle>
-        <CardDescription>Recent activities performed by you</CardDescription>
+        <CardDescription>Recent activities and actions performed on your account</CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? (

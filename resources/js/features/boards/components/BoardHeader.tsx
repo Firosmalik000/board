@@ -12,17 +12,20 @@ import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { MoreHorizontal, Users, Star, Archive, Trash2, UserPlus, Globe, Lock, RefreshCw, Image, Filter, X } from 'lucide-react'
+import { SidebarTrigger } from '@/components/ui/sidebar'
+import { MoreHorizontal, Users, Star, Archive, Trash2, UserPlus, Globe, Lock, RefreshCw, Image, Filter, X, BarChart3 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { router, usePage } from '@inertiajs/react'
 import { NotificationDropdown } from './NotificationDropdown'
+import { StatisticsDialog } from './StatisticsDialog'
 import { cn } from '@/lib/utils'
 
 interface BoardHeaderProps {
@@ -32,15 +35,18 @@ interface BoardHeaderProps {
   isPolling?: boolean
   onTogglePolling?: () => void
   activities?: any[]
+  totalActivities?: number
   filterByUser?: number | null
   onFilterChange?: (userId: number | null) => void
+  onCardClick?: (cardId: number) => void
 }
 
-export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onTogglePolling, activities = [], filterByUser, onFilterChange }: BoardHeaderProps) {
+export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onTogglePolling, activities = [], totalActivities, filterByUser, onFilterChange, onCardClick }: BoardHeaderProps) {
   const { auth } = usePage().props as any
   const currentUser = auth?.user
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false)
   const [isMembersDialogOpen, setIsMembersDialogOpen] = useState(false)
+  const [isStatisticsDialogOpen, setIsStatisticsDialogOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member')
   const [isLoading, setIsLoading] = useState(false)
@@ -237,34 +243,37 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
 
   return (
     <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3 sm:px-6 py-3 sm:py-4">
+        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+          {/* Sidebar Toggle - Only visible on mobile */}
+          <SidebarTrigger className="md:hidden shrink-0" />
+
           <div
-            className="h-10 w-10 rounded"
+            className="h-8 w-8 sm:h-10 sm:w-10 rounded shrink-0"
             style={{ backgroundColor: board.background_color }}
           />
-          <div>
-            <h1 className="text-xl font-bold">{board.title}</h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base sm:text-xl font-bold truncate">{board.title}</h1>
             {board.description && (
-              <p className="text-sm text-muted-foreground">{board.description}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">{board.description}</p>
             )}
           </div>
-          <Badge variant="secondary" className="gap-1">
+          <Badge variant="secondary" className="gap-1 hidden sm:flex">
             {getVisibilityIcon()}
             <span className="capitalize">{board.visibility}</span>
           </Badge>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
           {/* Sync Indicator */}
           {lastSyncTime && (
             <button
               onClick={onTogglePolling}
-              className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+              className="flex items-center gap-1.5 sm:gap-2 rounded-md border px-2 sm:px-3 py-1.5 text-xs hover:bg-muted transition-colors shrink-0"
               title={isPolling ? 'Auto-sync enabled (click to disable)' : 'Auto-sync disabled (click to enable)'}
             >
               <RefreshCw className={`h-3 w-3 ${isPolling ? 'animate-spin-slow' : ''}`} />
-              <span className="text-muted-foreground">
+              <span className="text-muted-foreground hidden sm:inline">
                 {isPolling ? `Synced ${timeSinceSync}` : 'Sync paused'}
               </span>
             </button>
@@ -273,9 +282,9 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
           {/* Members Avatars - Clickable to open members dialog */}
           <Dialog open={isMembersDialogOpen} onOpenChange={setIsMembersDialogOpen}>
             <DialogTrigger asChild>
-              <button className="flex -space-x-2 hover:opacity-80 transition-opacity">
-                {board.members?.slice(0, 5).map((member) => (
-                  <Avatar key={member.id} className="h-8 w-8 border-2 border-background">
+              <button className="flex -space-x-2 hover:opacity-80 transition-opacity shrink-0">
+                {board.members?.slice(0, 3).map((member) => (
+                  <Avatar key={member.id} className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-background">
                     <AvatarImage src={member.avatar ? `/storage/${member.avatar}` : undefined} alt={member.name} />
                     <AvatarFallback className="text-xs">
                       {member.name
@@ -286,9 +295,9 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
                     </AvatarFallback>
                   </Avatar>
                 ))}
-                {(board.members?.length || 0) > 5 && (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-muted text-xs">
-                    +{(board.members?.length || 0) - 5}
+                {(board.members?.length || 0) > 3 && (
+                  <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border-2 border-background bg-muted text-xs">
+                    +{(board.members?.length || 0) - 3}
                   </div>
                 )}
               </button>
@@ -296,6 +305,9 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Board Members ({board.members?.length || 0})</DialogTitle>
+                <DialogDescription>
+                  Manage members and their roles on this board
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 py-4 max-h-96 overflow-y-auto">
                 {board.members?.map((member) => {
@@ -353,7 +365,18 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
           </Dialog>
 
           {/* Notification Dropdown */}
-          <NotificationDropdown activities={activities} boardId={board.id} />
+          <NotificationDropdown activities={activities} boardId={board.id} totalActivities={totalActivities} onCardClick={onCardClick} />
+
+          {/* Statistics Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsStatisticsDialogOpen(true)}
+            className="gap-1 sm:gap-2 transition-all duration-200 shadow-sm hover:shadow shrink-0"
+          >
+            <BarChart3 className="h-4 w-4" />
+            <span className="font-medium hidden sm:inline">Statistics</span>
+          </Button>
 
           {/* Filter by Assigned User */}
           {onFilterChange && (
@@ -363,12 +386,12 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "gap-2 transition-all duration-200 shadow-sm",
+                    "gap-1 sm:gap-2 transition-all duration-200 shadow-sm shrink-0",
                     filterByUser && 'border-primary bg-primary/5 text-primary hover:bg-primary/10'
                   )}
                 >
                   <Filter className="h-4 w-4" />
-                  <span className="font-medium">
+                  <span className="font-medium hidden sm:inline">
                     {filterByUser
                       ? board.members?.find(m => m.id === filterByUser)?.name?.split(' ')[0] || 'Filter'
                       : 'Filter'}
@@ -420,14 +443,17 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
           {isCurrentUserAdmin() && (
             <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 shadow-sm hover:shadow transition-all">
+                <Button variant="outline" size="sm" className="gap-1 sm:gap-2 shadow-sm hover:shadow transition-all shrink-0">
                   <UserPlus className="h-4 w-4" />
-                  <span className="font-medium">Invite</span>
+                  <span className="font-medium hidden sm:inline">Invite</span>
                 </Button>
               </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Invite Member to Board</DialogTitle>
+                <DialogDescription>
+                  Send an invitation to collaborate on this board
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
@@ -509,6 +535,13 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
           />
         </div>
       </div>
+
+      {/* Statistics Dialog */}
+      <StatisticsDialog
+        open={isStatisticsDialogOpen}
+        onOpenChange={setIsStatisticsDialogOpen}
+        board={board}
+      />
     </div>
   )
 }

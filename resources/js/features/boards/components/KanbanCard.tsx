@@ -56,15 +56,15 @@ export const KanbanCard = React.memo(({ card, index, onClick }: KanbanCardProps)
               />
             )}
 
-            <div className="p-4 space-y-3">
+            <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
               {/* Labels */}
               {hasLabels && (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1">
                   {card.labels?.slice(0, 3).map((label: any) => (
                     <Badge
                       key={label.id}
                       variant="secondary"
-                      className="px-2 py-0.5 text-xs font-medium border-0"
+                      className="px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-medium border-0"
                       style={{
                         backgroundColor: label.color + '15',
                         color: label.color,
@@ -74,7 +74,7 @@ export const KanbanCard = React.memo(({ card, index, onClick }: KanbanCardProps)
                     </Badge>
                   ))}
                   {(card.labels?.length || 0) > 3 && (
-                    <Badge variant="secondary" className="px-2 py-0.5 text-xs">
+                    <Badge variant="secondary" className="px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs">
                       +{(card.labels?.length || 0) - 3}
                     </Badge>
                   )}
@@ -84,29 +84,29 @@ export const KanbanCard = React.memo(({ card, index, onClick }: KanbanCardProps)
               {/* Card Title */}
               <div className="flex items-start gap-2">
                 <h4 className={cn(
-                  "flex-1 text-sm font-semibold leading-snug text-foreground group-hover:text-primary transition-colors",
+                  "flex-1 text-xs sm:text-sm font-semibold leading-snug text-foreground group-hover:text-primary transition-colors",
                   card.is_completed && "line-through text-muted-foreground"
                 )}>
                   {card.title}
                 </h4>
                 {card.is_completed && (
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500 drop-shadow-sm" />
+                  <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-green-500 drop-shadow-sm" />
                 )}
               </div>
 
               {/* Card Metadata */}
-              <div className="flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center justify-between gap-2 sm:gap-3 text-[10px] sm:text-xs">
                 {/* Left side - Icons */}
-                <div className="flex items-center gap-3 text-muted-foreground">
+                <div className="flex items-center gap-1.5 sm:gap-3 text-muted-foreground flex-wrap">
                   {hasDueDate && (
                     <div className={cn(
-                      "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors",
+                      "flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md transition-colors",
                       isOverdue && "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
                       isDueSoon && !isOverdue && "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400",
                       !isOverdue && !isDueSoon && "bg-muted"
                     )}>
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span className="font-medium">
+                      <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <span className="font-medium text-[10px] sm:text-xs">
                         {new Date(card.due_date!).toLocaleDateString('id-ID', {
                           day: 'numeric',
                           month: 'short'
@@ -117,39 +117,39 @@ export const KanbanCard = React.memo(({ card, index, onClick }: KanbanCardProps)
 
                   {checklistCount > 0 && (
                     <div className={cn(
-                      "flex items-center gap-1.5 px-2 py-1 rounded-md",
+                      "flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md",
                       completedChecklists === checklistCount ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400" : "bg-muted"
                     )}>
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      <span className="font-medium">{completedChecklists}/{checklistCount}</span>
+                      <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <span className="font-medium text-[10px] sm:text-xs">{completedChecklists}/{checklistCount}</span>
                     </div>
                   )}
 
                   {commentCount > 0 && (
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted hover:bg-muted/80 transition-colors">
-                      <MessageSquare className="h-3.5 w-3.5" />
-                      <span className="font-medium">{commentCount}</span>
+                    <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md bg-muted hover:bg-muted/80 transition-colors">
+                      <MessageSquare className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <span className="font-medium text-[10px] sm:text-xs">{commentCount}</span>
                     </div>
                   )}
 
                   {attachmentCount > 0 && (
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted hover:bg-muted/80 transition-colors">
-                      <Paperclip className="h-3.5 w-3.5" />
-                      <span className="font-medium">{attachmentCount}</span>
+                    <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md bg-muted hover:bg-muted/80 transition-colors">
+                      <Paperclip className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <span className="font-medium text-[10px] sm:text-xs">{attachmentCount}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Right side - Members */}
                 {hasMembers && (
-                  <div className="flex -space-x-2">
+                  <div className="flex -space-x-1.5 sm:-space-x-2">
                     {card.members?.slice(0, 3).map((member) => (
                       <Avatar
                         key={member.id}
-                        className="h-7 w-7 border-2 border-background ring-1 ring-border transition-transform hover:scale-110 hover:z-10"
+                        className="h-6 w-6 sm:h-7 sm:w-7 border-2 border-background ring-1 ring-border transition-transform hover:scale-110 hover:z-10"
                       >
                         <AvatarImage src={member.avatar ? `/storage/${member.avatar}` : undefined} alt={member.name} />
-                        <AvatarFallback className="text-xs font-semibold bg-gradient-to-br from-primary/20 to-primary/10">
+                        <AvatarFallback className="text-[10px] sm:text-xs font-semibold bg-gradient-to-br from-primary/20 to-primary/10">
                           {member.name
                             .split(' ')
                             .map((n) => n[0])
@@ -159,7 +159,7 @@ export const KanbanCard = React.memo(({ card, index, onClick }: KanbanCardProps)
                       </Avatar>
                     ))}
                     {(card.members?.length || 0) > 3 && (
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-gradient-to-br from-muted to-muted/50 text-xs font-semibold ring-1 ring-border">
+                      <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border-2 border-background bg-gradient-to-br from-muted to-muted/50 text-[10px] sm:text-xs font-semibold ring-1 ring-border">
                         +{(card.members?.length || 0) - 3}
                       </div>
                     )}

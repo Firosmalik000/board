@@ -12,10 +12,13 @@ interface Board {
   description?: string
   visibility: 'private' | 'team' | 'public'
   background_color: string
+  background_image?: string
   owner_id: number
   lists?: List[]
   members?: User[]
   labels?: Label[]
+  created_at?: string
+  updated_at?: string
 }
 
 interface List {

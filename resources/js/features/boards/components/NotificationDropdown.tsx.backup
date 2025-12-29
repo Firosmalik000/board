@@ -17,11 +17,7 @@ import {
   Search,
   X,
   Filter,
-  Calendar as CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  User
+  Calendar as CalendarIcon
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -35,20 +31,12 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { formatDistanceToNow, format, isToday, isYesterday, isThisWeek, isThisMonth } from 'date-fns'
 import { useState, useEffect, useMemo } from 'react'
 import { cn } from '@/lib/utils'
@@ -63,11 +51,9 @@ interface Activity {
   }
   action: string
   entity_type: string
-  entity_id?: number
   metadata?: {
     entity_name?: string
     board_name?: string
-    card_id?: number
   }
   created_at: string
 }
@@ -75,28 +61,15 @@ interface Activity {
 interface NotificationDropdownProps {
   activities: Activity[]
   boardId: number
-  totalActivities?: number
-  onCardClick?: (cardId: number) => void
 }
 
-export function NotificationDropdown({ activities: initialActivities, boardId, totalActivities: initialTotal, onCardClick }: NotificationDropdownProps) {
+export function NotificationDropdown({ activities, boardId }: NotificationDropdownProps) {
   const [lastReadTime, setLastReadTime] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedFilters, setSelectedFilters] = useState<string[]>([])
   const [showOnlyUnread, setShowOnlyUnread] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<string>('all')
-  const [startDate, setStartDate] = useState<string>('')
-  const [endDate, setEndDate] = useState<string>('')
-
-  // Pagination state
-  const [allActivities, setAllActivities] = useState<Activity[]>(initialActivities)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalActivities, setTotalActivities] = useState(initialTotal || initialActivities.length)
-  const [isLoadingPage, setIsLoadingPage] = useState(false)
-  const perPage = 50
 
   // Load last read time from localStorage on mount
   useEffect(() => {
@@ -105,71 +78,8 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
     setLastReadTime(savedTime)
   }, [boardId])
 
-  // Calculate total pages
-  useEffect(() => {
-    setTotalPages(Math.ceil(totalActivities / perPage))
-  }, [totalActivities, perPage])
-
-  // Fetch activities for a specific page
-  const fetchActivitiesPage = async (page: number) => {
-    setIsLoadingPage(true)
-    try {
-      // Build query parameters
-      const params = new URLSearchParams({
-        page: page.toString(),
-        per_page: perPage.toString(),
-      })
-
-      // Add filters
-      if (selectedUser !== 'all') {
-        params.append('user_id', selectedUser)
-      }
-      if (startDate) {
-        params.append('start_date', startDate)
-      }
-      if (endDate) {
-        params.append('end_date', endDate)
-      }
-      if (selectedFilters.length > 0) {
-        params.append('actions', selectedFilters.join(','))
-      }
-      if (searchQuery.trim()) {
-        params.append('search', searchQuery.trim())
-      }
-
-      const response = await fetch(`/boards/${boardId}/activities?${params.toString()}`)
-      const data = await response.json()
-
-      setAllActivities(data.data)
-      setCurrentPage(data.current_page)
-      setTotalPages(data.last_page)
-      setTotalActivities(data.total)
-    } catch (error) {
-      console.error('Failed to fetch activities:', error)
-    } finally {
-      setIsLoadingPage(false)
-    }
-  }
-
-  // Refetch when modal opens or filters change
-  useEffect(() => {
-    if (isModalOpen) {
-      fetchActivitiesPage(1)
-    }
-  }, [isModalOpen, selectedUser, startDate, endDate, selectedFilters, searchQuery])
-
-  const handlePageChange = (page: number) => {
-    if (page < 1 || page > totalPages || page === currentPage) return
-    fetchActivitiesPage(page)
-    // Scroll to top of content
-    const content = document.querySelector('[data-activity-content]')
-    if (content) {
-      content.scrollTop = 0
-    }
-  }
-
   // Calculate unread count - activities newer than last read time
-  const unreadCount = initialActivities.filter(activity => {
+  const unreadCount = activities.filter(activity => {
     if (!lastReadTime) return true // If never read, all are unread
     return new Date(activity.created_at) > new Date(lastReadTime)
   }).length
@@ -178,7 +88,7 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
 
-    if (open && initialActivities.length > 0) {
+    if (open && activities.length > 0) {
       // Save current timestamp as last read time
       const now = new Date().toISOString()
       const storageKey = `board_${boardId}_last_read`
@@ -471,25 +381,28 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
     setIsOpen(false) // Close dropdown when opening modal
   }
 
-  // Get unique users from activities
-  const uniqueUsers = useMemo(() => {
-    const usersMap = new Map<number, { id: number; name: string }>()
-    allActivities.forEach(activity => {
-      if (!usersMap.has(activity.user.id)) {
-        usersMap.set(activity.user.id, {
-          id: activity.user.id,
-          name: activity.user.name
-        })
-      }
-    })
-    return Array.from(usersMap.values()).sort((a, b) => a.name.localeCompare(b.name))
-  }, [allActivities])
-
-  // Filter activities - backend handles most filters, frontend only handles unread
+  // Filter activities based on search and filters
   const filteredActivities = useMemo(() => {
-    let filtered = allActivities
+    let filtered = activities
 
-    // Filter by unread (frontend only - based on localStorage)
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(activity => {
+        const message = getActivityMessage(activity).toLowerCase()
+        const userName = activity.user.name.toLowerCase()
+        return message.includes(query) || userName.includes(query)
+      })
+    }
+
+    // Filter by action types
+    if (selectedFilters.length > 0) {
+      filtered = filtered.filter(activity =>
+        selectedFilters.includes(activity.action)
+      )
+    }
+
+    // Filter by unread
     if (showOnlyUnread && lastReadTime) {
       filtered = filtered.filter(activity =>
         new Date(activity.created_at) > new Date(lastReadTime)
@@ -497,7 +410,7 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
     }
 
     return filtered
-  }, [allActivities, showOnlyUnread, lastReadTime])
+  }, [activities, searchQuery, selectedFilters, showOnlyUnread, lastReadTime])
 
   // Group activities by date
   const groupedActivities = useMemo(() => {
@@ -551,26 +464,6 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
     setSearchQuery('')
     setSelectedFilters([])
     setShowOnlyUnread(false)
-    setSelectedUser('all')
-    setStartDate('')
-    setEndDate('')
-  }
-
-  const handleActivityClick = (activity: Activity) => {
-    // Extract card_id: use entity_id if entity_type is 'card', otherwise check metadata
-    let cardId: number | undefined
-
-    if (activity.entity_type === 'card' && activity.entity_id) {
-      cardId = activity.entity_id
-    } else if (activity.metadata?.card_id) {
-      cardId = activity.metadata.card_id
-    }
-
-    if (cardId && onCardClick) {
-      onCardClick(cardId)
-      setIsModalOpen(false)
-      setIsOpen(false)
-    }
   }
 
   return (
@@ -621,7 +514,7 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
             </div>
           </div>
         <div className="max-h-[60vh] sm:max-h-96 overflow-y-auto">
-          {initialActivities.length === 0 ? (
+          {activities.length === 0 ? (
             <div className="px-4 py-12 text-center">
               <Bell className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
               <p className="text-sm font-medium text-muted-foreground">No recent activity</p>
@@ -631,18 +524,15 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
             </div>
           ) : (
             <div className="divide-y">
-              {initialActivities.slice(0, 15).map((activity) => {
+              {activities.slice(0, 15).map((activity) => {
                 const isUnread = lastReadTime && new Date(activity.created_at) > new Date(lastReadTime)
-                const hasCard = (activity.entity_type === 'card' && activity.entity_id) || activity.metadata?.card_id
 
                 return (
                   <div
                     key={activity.id}
-                    onClick={() => hasCard && handleActivityClick(activity)}
                     className={cn(
                       "px-3 sm:px-4 py-3 hover:bg-muted/50 transition-colors relative",
-                      isUnread && "bg-primary/5 border-l-2 border-l-primary",
-                      hasCard && "cursor-pointer"
+                      isUnread && "bg-primary/5 border-l-2 border-l-primary"
                     )}
                   >
                     <div className="flex gap-2 sm:gap-3">
@@ -691,7 +581,7 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
             </div>
           )}
         </div>
-        {totalActivities > 15 && (
+        {activities.length > 15 && (
           <div className="px-3 sm:px-4 py-2.5 border-t bg-muted/20">
             <Button
               variant="ghost"
@@ -699,7 +589,7 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
               onClick={handleShowAllClick}
               className="w-full text-xs font-medium hover:bg-primary/10"
             >
-              View all {totalActivities} activities
+              View all {activities.length} activities
               <ExternalLink className="ml-2 h-3 w-3" />
             </Button>
           </div>
@@ -710,10 +600,6 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
     {/* All Activity Modal */}
     <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
       <DialogContent className="max-w-[95vw] sm:max-w-5xl h-[95vh] p-0 gap-0 flex flex-col overflow-hidden">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Activity Timeline</DialogTitle>
-          <DialogDescription>View all board activities and changes</DialogDescription>
-        </DialogHeader>
         {/* Header */}
         <div className="px-4 sm:px-6 py-4 sm:py-5 border-b bg-gradient-to-br from-primary/5 via-primary/3 to-background shrink-0">
           <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
@@ -732,7 +618,7 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
             </div>
             <div className="flex items-center gap-2 self-end sm:self-auto">
               <Badge variant="secondary" className="text-xs font-semibold px-3 py-1">
-                {totalActivities} Total
+                {activities.length} Activities
               </Badge>
               {unreadCount > 0 && (
                 <Badge variant="default" className="text-xs font-semibold px-3 py-1 animate-pulse">
@@ -801,53 +687,6 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Filter by User */}
-              <Select value={selectedUser} onValueChange={setSelectedUser}>
-                <SelectTrigger className="h-9 w-[180px] border-2 gap-2">
-                  <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <SelectValue placeholder="All Users" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Users</SelectItem>
-                  {uniqueUsers.map(user => (
-                    <SelectItem key={user.id} value={user.id.toString()}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Date Range Filter */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 h-9 px-3 border-2 rounded-md bg-background">
-                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    placeholder="Start Date"
-                    className="text-xs bg-transparent border-0 outline-none w-[110px]"
-                    title="Start Date"
-                  />
-                </div>
-
-                {(startDate || endDate) && (
-                  <span className="text-xs text-muted-foreground font-medium">to</span>
-                )}
-
-                <div className="flex items-center gap-1.5 h-9 px-3 border-2 rounded-md bg-background">
-                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    placeholder="End Date"
-                    className="text-xs bg-transparent border-0 outline-none w-[110px]"
-                    title="End Date"
-                  />
-                </div>
-              </div>
-
               <Button
                 variant={showOnlyUnread ? "default" : "outline"}
                 size="sm"
@@ -866,7 +705,7 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
                 )}
               </Button>
 
-              {(searchQuery || selectedFilters.length > 0 || showOnlyUnread || selectedUser !== 'all' || startDate || endDate) && (
+              {(searchQuery || selectedFilters.length > 0 || showOnlyUnread) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -879,25 +718,15 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
               )}
 
               <div className="ml-auto text-xs font-medium text-muted-foreground bg-muted/50 px-3 py-2 rounded-md">
-                <span className="text-foreground font-bold">{filteredActivities.length}</span> / {totalActivities}
+                <span className="text-foreground font-bold">{filteredActivities.length}</span> / {activities.length}
               </div>
             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div
-          className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 bg-gradient-to-b from-background to-muted/10"
-          data-activity-content
-        >
-          {isLoadingPage ? (
-            <div className="flex items-center justify-center min-h-[400px]">
-              <div className="text-center">
-                <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-                <p className="text-sm font-medium text-muted-foreground">Loading activities...</p>
-              </div>
-            </div>
-          ) : filteredActivities.length === 0 ? (
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 bg-gradient-to-b from-background to-muted/10">
+          {filteredActivities.length === 0 ? (
             <div className="flex items-center justify-center min-h-[400px]">
               <div className="text-center max-w-md">
                 {searchQuery || selectedFilters.length > 0 || showOnlyUnread ? (
@@ -951,18 +780,15 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
                   <div className="space-y-3 sm:space-y-4">
                     {groupActivities.map((activity) => {
                       const isUnread = lastReadTime && new Date(activity.created_at) > new Date(lastReadTime)
-                      const hasCard = (activity.entity_type === 'card' && activity.entity_id) || activity.metadata?.card_id
 
                       return (
                         <div
                           key={activity.id}
-                          onClick={() => hasCard && handleActivityClick(activity)}
                           className={cn(
                             "p-4 sm:p-5 rounded-2xl border-2 transition-all duration-200 group relative overflow-hidden",
                             isUnread
                               ? "bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/40 shadow-lg shadow-primary/10 hover:shadow-xl hover:shadow-primary/20"
-                              : "bg-card/50 hover:bg-card border-border/40 hover:border-border shadow-sm hover:shadow-md backdrop-blur-sm",
-                            hasCard && "cursor-pointer"
+                              : "bg-card/50 hover:bg-card border-border/40 hover:border-border shadow-sm hover:shadow-md backdrop-blur-sm"
                           )}
                         >
                           {isUnread && (
@@ -1033,103 +859,8 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
           )}
         </div>
 
-        {/* Pagination Controls */}
-        {!isLoadingPage && totalPages > 1 && (
-          <div className="px-4 sm:px-6 py-3 border-t bg-muted/30 shrink-0">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="text-xs sm:text-sm text-muted-foreground">
-                Page <strong className="text-foreground">{currentPage}</strong> of <strong className="text-foreground">{totalPages}</strong>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {/* Previous Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="h-8 gap-1"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span className="hidden sm:inline">Previous</span>
-                </Button>
-
-                {/* Page Numbers */}
-                <div className="flex items-center gap-1">
-                  {/* First Page */}
-                  {currentPage > 3 && (
-                    <>
-                      <Button
-                        variant={currentPage === 1 ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handlePageChange(1)}
-                        className="h-8 w-8 p-0 text-xs"
-                      >
-                        1
-                      </Button>
-                      {currentPage > 4 && (
-                        <span className="px-1 text-muted-foreground">...</span>
-                      )}
-                    </>
-                  )}
-
-                  {/* Pages around current */}
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter(page => {
-                      return page === currentPage ||
-                             page === currentPage - 1 ||
-                             page === currentPage + 1 ||
-                             (currentPage <= 2 && page <= 3) ||
-                             (currentPage >= totalPages - 1 && page >= totalPages - 2)
-                    })
-                    .map(page => (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handlePageChange(page)}
-                        className="h-8 w-8 p-0 text-xs font-medium"
-                      >
-                        {page}
-                      </Button>
-                    ))}
-
-                  {/* Last Page */}
-                  {currentPage < totalPages - 2 && (
-                    <>
-                      {currentPage < totalPages - 3 && (
-                        <span className="px-1 text-muted-foreground">...</span>
-                      )}
-                      <Button
-                        variant={currentPage === totalPages ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handlePageChange(totalPages)}
-                        className="h-8 w-8 p-0 text-xs"
-                      >
-                        {totalPages}
-                      </Button>
-                    </>
-                  )}
-                </div>
-
-                {/* Next Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="h-8 gap-1"
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Footer with stats */}
-        {allActivities.length > 0 && (
+        {activities.length > 0 && (
           <div className="px-4 sm:px-6 py-4 border-t-2 bg-gradient-to-r from-primary/5 via-background to-muted/20 shrink-0">
             <div className="flex items-center justify-between text-xs sm:text-sm flex-wrap gap-3">
               <div className="flex items-center gap-3 sm:gap-4">
@@ -1137,7 +868,7 @@ export function NotificationDropdown({ activities: initialActivities, boardId, t
                   <span className="text-muted-foreground font-medium">Showing</span>
                   <span className="font-bold text-primary text-base">{filteredActivities.length}</span>
                   <span className="text-muted-foreground font-medium">of</span>
-                  <span className="font-bold text-foreground text-base">{totalActivities}</span>
+                  <span className="font-bold text-foreground text-base">{activities.length}</span>
                 </div>
                 {unreadCount > 0 && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg border border-primary/20">

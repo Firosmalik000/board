@@ -20,37 +20,163 @@ Route::post('invitations/{token}/accept', [InvitationController::class, 'accept'
 Route::post('invitations/{token}/register', [InvitationController::class, 'acceptAndRegister'])->name('invitations.register');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    // DEBUG ROUTE - Remove after debugging
+    Route::get('debug-dashboard', function () {
+        $user = request()->user();
+
+        $ownedBoards = $user->ownedBoards()->get();
+        $memberBoards = $user->boards()->get();
+        $allBoards = $user->allBoards()->get();
+        $allBoardsActive = $user->allBoards()->where('is_archived', false)->get();
+
+        $createdCards = $user->createdCards()->get();
+        $assignedCards = $user->assignedCards()->get();
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
+            'boards' => [
+                'owned' => $ownedBoards->count() . ' boards',
+                'owned_list' => $ownedBoards->pluck('id', 'title'),
+                'member' => $memberBoards->count() . ' boards',
+                'member_list' => $memberBoards->pluck('id', 'title'),
+                'all' => $allBoards->count() . ' boards',
+                'all_list' => $allBoards->pluck('id', 'title'),
+                'all_active' => $allBoardsActive->count() . ' boards',
+                'all_active_list' => $allBoardsActive->pluck('id', 'title'),
+            ],
+            'cards' => [
+                'created' => $createdCards->count() . ' cards',
+                'created_list' => $createdCards->pluck('id', 'title')->take(5),
+                'assigned' => $assignedCards->count() . ' cards',
+                'assigned_list' => $assignedCards->pluck('id', 'title')->take(5),
+            ],
+        ]);
+    });
+
     Route::get('dashboard', function () {
         $user = request()->user();
 
-        // Get statistics
-        $totalBoards = $user->ownedBoards()->count() + $user->boards()->count();
-        $totalCards = $user->createdCards()->count();
-        $completedTasks = $user->createdCards()->where('is_completed', true)->count();
+        try {
+            // Use cache for statistics to improve performance and consistency
+            $cacheKey = "dashboard_stats_{$user->id}";
+            $cacheDuration = now()->addMinutes(5);
 
-        // Get recent boards (last 6)
-        $recentBoards = $user->allBoards()
-            ->with(['owner', 'members'])
-            ->latest()
-            ->limit(6)
-            ->get();
+            $statistics = cache()->remember($cacheKey, $cacheDuration, function () use ($user) {
+                // FIX: Use allBoards() to prevent double counting
+                // (Owner is also added as member, so counting both would duplicate)
+                $totalBoards = $user->allBoards()
+                    ->where('is_archived', false)
+                    ->count();
 
-        // Get recent activity cards
-        $recentCards = $user->createdCards()
-            ->with(['list.board', 'creator'])
-            ->latest()
-            ->limit(5)
-            ->get();
+                // Count BOTH created AND assigned cards
+                $createdCardsCount = $user->createdCards()->count();
+                $assignedCardsCount = $user->assignedCards()->count();
 
-        return Inertia::render('dashboard', [
-            'statistics' => [
-                'totalBoards' => $totalBoards,
-                'totalCards' => $totalCards,
-                'completedTasks' => $completedTasks,
-            ],
-            'recentBoards' => $recentBoards,
-            'recentCards' => $recentCards,
-        ]);
+                // Get unique card IDs to prevent double counting
+                // (if user created AND is assigned to same card)
+                // FIX: Specify table name to avoid ambiguous column error
+                $allCardIds = $user->createdCards()->pluck('cards.id')
+                    ->merge($user->assignedCards()->pluck('cards.id'))
+                    ->unique();
+                $totalCards = $allCardIds->count();
+
+                // Count completed tasks from unique cards
+                $completedCardIds = $user->createdCards()->where('is_completed', true)->pluck('cards.id')
+                    ->merge($user->assignedCards()->where('is_completed', true)->pluck('cards.id'))
+                    ->unique();
+                $completedTasks = $completedCardIds->count();
+
+                return [
+                    'totalBoards' => $totalBoards,
+                    'totalCards' => $totalCards,
+                    'completedTasks' => $completedTasks,
+                    'createdCards' => $createdCardsCount,
+                    'assignedCards' => $assignedCardsCount,
+                ];
+            });
+
+            // Get recent boards with optimized eager loading (exclude archived)
+            $recentBoards = $user->allBoards()
+                ->where('is_archived', false)
+                ->with(['owner:id,name', 'members:id,name'])
+                ->latest('updated_at')
+                ->limit(6)
+                ->get()
+                ->map(function ($board) use ($user) {
+                    return [
+                        'id' => $board->id,
+                        'title' => $board->title,
+                        'description' => $board->description,
+                        'background_color' => $board->background_color,
+                        'background_image' => $board->background_image,
+                        'is_owner' => $board->owner_id === $user->id,
+                        'owner' => [
+                            'id' => $board->owner->id,
+                            'name' => $board->owner->name,
+                        ],
+                        'members' => $board->members->map(fn($m) => [
+                            'id' => $m->id,
+                            'name' => $m->name,
+                        ]),
+                    ];
+                });
+
+            // Get recent activity cards (BOTH created AND assigned)
+            $createdCards = $user->createdCards()
+                ->with(['list:id,title,board_id', 'list.board:id,title'])
+                ->get();
+
+            $assignedCards = $user->assignedCards()
+                ->with(['list:id,title,board_id', 'list.board:id,title'])
+                ->get();
+
+            // Merge and sort by created_at
+            $recentCards = $createdCards->concat($assignedCards)
+                ->unique('id') // Remove duplicates if user created AND assigned to same card
+                ->sortByDesc('created_at')
+                ->take(10) // Show more activities (10 instead of 5)
+                ->values()
+                ->map(function ($card) use ($user) {
+                    return [
+                        'id' => $card->id,
+                        'title' => $card->title,
+                        'is_completed' => $card->is_completed,
+                        'created_at' => $card->created_at->toISOString(),
+                        'is_creator' => $card->created_by === $user->id,
+                        'list' => [
+                            'title' => $card->list->title,
+                            'board' => [
+                                'id' => $card->list->board->id,
+                                'title' => $card->list->board->title,
+                            ],
+                        ],
+                    ];
+                });
+
+            return Inertia::render('dashboard', [
+                'statistics' => $statistics,
+                'recentBoards' => $recentBoards,
+                'recentCards' => $recentCards,
+            ]);
+        } catch (\Exception $e) {
+            // Graceful error handling with fallback data
+            \Log::error('Dashboard error: ' . $e->getMessage());
+
+            return Inertia::render('dashboard', [
+                'statistics' => [
+                    'totalBoards' => 0,
+                    'totalCards' => 0,
+                    'completedTasks' => 0,
+                ],
+                'recentBoards' => [],
+                'recentCards' => [],
+                'error' => 'Unable to load dashboard data. Please refresh the page.',
+            ]);
+        }
     })->name('dashboard');
 
     // Board routes
@@ -105,6 +231,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Lazy loading routes (for performance)
     Route::get('cards/{card}/comments', [WebBoardController::class, 'getCardComments'])->name('cards.comments.list');
+    Route::get('boards/{board}/activities', [WebBoardController::class, 'getActivities'])->name('boards.activities.list');
 
     // User Profile routes
     Route::get('user/profile', [ProfileController::class, 'show'])->name('user.profile.show');

@@ -67,23 +67,23 @@ export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCa
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.3 }}
-      className="flex w-80 shrink-0 flex-col max-h-full self-start"
+      className="flex w-72 sm:w-80 shrink-0 flex-col max-h-full self-start"
     >
       <Card className={cn(
-        "flex flex-col backdrop-blur-sm bg-background/95 border-border/50 p-4 transition-all duration-300 shadow-md hover:shadow-lg",
+        "flex flex-col backdrop-blur-sm bg-background/95 border-border/50 p-2 sm:p-4 transition-all duration-300 shadow-md hover:shadow-lg",
         isDragging && "shadow-2xl rotate-2 scale-105 ring-2 ring-primary/30"
       )}>
         {/* List Header */}
-        <div className="mb-3 flex items-center gap-3 shrink-0">
+        <div className="mb-2 sm:mb-3 flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Drag Handle */}
           <div
             {...dragHandleProps}
             className="cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-primary transition-all duration-200 hover:scale-110"
           >
-            <GripVertical className="h-5 w-5" />
+            <GripVertical className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
 
-          <div className="flex-1 flex items-center justify-between">
+          <div className="flex-1 flex items-center justify-between min-w-0">
             {isEditingTitle ? (
               <Input
                 value={editedTitle}
@@ -97,16 +97,16 @@ export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCa
                   }
                 }}
                 autoFocus
-                className="mr-2 h-9 font-semibold"
+                className="mr-2 h-8 sm:h-9 font-semibold text-sm sm:text-base"
               />
             ) : (
               <h3
-                className="group cursor-pointer truncate font-bold text-base flex items-center gap-2 hover:text-primary transition-colors"
+                className="group cursor-pointer truncate font-bold text-sm sm:text-base flex items-center gap-1.5 sm:gap-2 hover:text-primary transition-colors min-w-0"
                 onClick={() => setIsEditingTitle(true)}
                 title={list.title}
               >
-                {list.title}
-                <span className="inline-flex items-center justify-center min-w-[2rem] h-6 px-2 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                <span className="truncate">{list.title}</span>
+                <span className="inline-flex items-center justify-center min-w-[1.75rem] sm:min-w-[2rem] h-5 sm:h-6 px-1.5 sm:px-2 rounded-full bg-primary/10 text-primary text-[10px] sm:text-xs font-bold shrink-0">
                   {filteredCards.length}{filterByUser && list.cards?.length !== filteredCards.length ? `/${list.cards?.length}` : ''}
                 </span>
               </h3>
@@ -114,8 +114,8 @@ export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCa
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors">
-                  <MoreVertical className="h-4 w-4" />
+                <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors shrink-0">
+                  <MoreVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -132,20 +132,20 @@ export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCa
         </div>
 
         {/* Add Card Button - Moved to top */}
-        <div className="mb-3 shrink-0">
+        <div className="mb-2 sm:mb-3 shrink-0">
           <Button
             onClick={() => onCreateCard(list.id)}
             variant="ghost"
-            className="w-full justify-start h-9 hover:bg-primary/10 hover:text-primary transition-all duration-200 group"
+            className="w-full justify-start h-8 sm:h-9 hover:bg-primary/10 hover:text-primary transition-all duration-200 group text-xs sm:text-sm"
             size="sm"
           >
-            <Plus className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+            <Plus className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 group-hover:scale-110 transition-transform" />
             <span className="font-medium">Add card</span>
           </Button>
         </div>
 
         {/* Cards Container - Scrollable */}
-        <div className="overflow-y-auto overflow-x-hidden pr-1 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+        <div className="overflow-y-auto overflow-x-hidden pr-0.5 sm:pr-1 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent" style={{ maxHeight: 'calc(100vh - 250px)' }}>
           <Droppable droppableId={list.id.toString()}>
             {(provided, snapshot) => (
               <div
@@ -174,15 +174,15 @@ export const KanbanList = React.memo(({ list, onAddCard, onCardClick, onCreateCa
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="flex flex-col items-center justify-center py-12 px-4 text-center"
+                    className="flex flex-col items-center justify-center py-8 sm:py-12 px-2 sm:px-4 text-center"
                   >
-                    <div className="rounded-full bg-muted/50 p-4 mb-3">
-                      <Plus className="h-8 w-8 text-muted-foreground/40" />
+                    <div className="rounded-full bg-muted/50 p-3 sm:p-4 mb-2 sm:mb-3">
+                      <Plus className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/40" />
                     </div>
-                    <p className="text-sm font-medium text-muted-foreground/70">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground/70">
                       {filterByUser ? 'No cards match filter' : 'No cards yet'}
                     </p>
-                    <p className="text-xs text-muted-foreground/50 mt-1">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground/50 mt-1">
                       {filterByUser ? 'Try a different filter' : 'Click "Add card" to create one'}
                     </p>
                   </motion.div>

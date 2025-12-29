@@ -9,7 +9,11 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(npm run build:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "WebFetch(domain:template-test.test)",
+      "Bash(C:UsersXBOSSAppDataLocalHerdbinphp.exe artisan cache:clear)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(\"C:/Users/XBOSS/AppData/Local/Herd/bin/php.exe\" artisan cache:clear)"
     ],
     "deny": [],
     "ask": []

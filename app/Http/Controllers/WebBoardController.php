@@ -28,11 +28,21 @@ class WebBoardController extends Controller
     {
         $user = $request->user();
 
-        // ULTRA optimized - minimal data for fast loading
+        // Optimized - load necessary data for boards overview
+        // Filter out archived boards for consistency with dashboard
         $boards = $user->allBoards()
-            ->select('id', 'title', 'description', 'background_color', 'owner_id', 'visibility', 'updated_at')
-            ->with('owner:id,name,avatar')
-            ->withCount('lists')
+            ->where('is_archived', false)
+            ->select('id', 'title', 'description', 'background_color', 'background_image', 'owner_id', 'visibility', 'created_at', 'updated_at')
+            ->with([
+                'owner:id,name,avatar',
+                'members:id,name,email,avatar',
+                'lists' => function ($query) {
+                    $query->select('id', 'board_id', 'title')
+                        ->with(['cards' => function ($cardQuery) {
+                            $cardQuery->select('id', 'list_id', 'is_completed');
+                        }]);
+                }
+            ])
             ->latest('updated_at')
             ->get();
 
@@ -119,16 +129,22 @@ class WebBoardController extends Controller
             'labels:id,name,color',
         ]);
 
-        // Activities: Only 10 most recent for speed
+        // Activities: Paginated for better performance
+        // Get 50 most recent for initial load (dropdown shows 15)
+        // Modal can load more via API endpoint
         $activities = ActivityLog::where('board_id', $board->id)
             ->with('user:id,name,avatar')
             ->latest('created_at')
-            ->limit(10)
-            ->get(['id', 'user_id', 'action', 'entity_type', 'metadata', 'created_at']);
+            ->limit(50)
+            ->get(['id', 'user_id', 'action', 'entity_type', 'entity_id', 'metadata', 'created_at']);
+
+        // Get total count for pagination info
+        $totalActivities = ActivityLog::where('board_id', $board->id)->count();
 
         return Inertia::render('boards/show', [
             'board' => $board,
             'activities' => $activities,
+            'totalActivities' => $totalActivities,
         ]);
     }
 
@@ -1573,5 +1589,64 @@ public function updateCard(Request $request, Card $card)
             ->get();
 
         return response()->json(['comments' => $comments]);
+    }
+
+    /**
+     * Get board activities with pagination (for activity modal)
+     */
+    public function getActivities(Request $request, Board $board)
+    {
+        if (!$board->hasMember($request->user())) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $perPage = $request->input('per_page', 50);
+        $page = $request->input('page', 1);
+
+        $query = ActivityLog::where('board_id', $board->id);
+
+        // Filter by user
+        if ($request->has('user_id') && $request->input('user_id') !== 'all') {
+            $query->where('user_id', $request->input('user_id'));
+        }
+
+        // Filter by date range
+        if ($request->has('start_date') && $request->input('start_date')) {
+            $query->whereDate('created_at', '>=', $request->input('start_date'));
+        }
+
+        if ($request->has('end_date') && $request->input('end_date')) {
+            $query->whereDate('created_at', '<=', $request->input('end_date'));
+        }
+
+        // Filter by action types
+        if ($request->has('actions') && $request->input('actions')) {
+            $actions = is_array($request->input('actions'))
+                ? $request->input('actions')
+                : explode(',', $request->input('actions'));
+            $query->whereIn('action', $actions);
+        }
+
+        // Search filter
+        if ($request->has('search') && $request->input('search')) {
+            $search = $request->input('search');
+            $query->where(function($q) use ($search) {
+                $q->whereHas('user', function($userQuery) use ($search) {
+                    $userQuery->where('name', 'like', '%' . $search . '%');
+                })
+                ->orWhere('entity_type', 'like', '%' . $search . '%')
+                ->orWhere('action', 'like', '%' . $search . '%')
+                ->orWhereRaw('JSON_EXTRACT(metadata, "$.entity_name") like ?', ['%' . $search . '%'])
+                ->orWhereRaw('JSON_EXTRACT(metadata, "$.card_title") like ?', ['%' . $search . '%'])
+                ->orWhereRaw('JSON_EXTRACT(metadata, "$.list_name") like ?', ['%' . $search . '%']);
+            });
+        }
+
+        $activities = $query
+            ->with('user:id,name,avatar')
+            ->latest('created_at')
+            ->paginate($perPage, ['id', 'user_id', 'action', 'entity_type', 'entity_id', 'metadata', 'created_at']);
+
+        return response()->json($activities);
     }
 }

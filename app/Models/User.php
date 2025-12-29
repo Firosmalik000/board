@@ -90,10 +90,13 @@ class User extends Authenticatable
      */
     public function allBoards()
     {
-        return Board::where('owner_id', $this->id)
-            ->orWhereHas('members', function ($query) {
-                $query->where('user_id', $this->id);
-            });
+        // Use where closure to group OR conditions properly
+        return Board::where(function ($query) {
+            $query->where('owner_id', $this->id)
+                ->orWhereHas('members', function ($subQuery) {
+                    $subQuery->where('user_id', $this->id);
+                });
+        });
     }
 
     /**

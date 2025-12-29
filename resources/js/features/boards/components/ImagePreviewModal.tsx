@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Download, ZoomIn, ZoomOut, RotateCw } from 'lucide-react'
 
@@ -39,6 +39,9 @@ export function ImagePreviewModal({
             <span>{filename}</span>
             <span className="text-sm font-normal text-muted-foreground">{zoom}%</span>
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Preview and manipulate image with zoom and rotation controls
+          </DialogDescription>
         </DialogHeader>
 
         {/* Zoom Controls */}

@@ -29,6 +29,8 @@ class ProfileController extends Controller
                 'totalCards' => $totalCards,
                 'completedTasks' => $completedTasks,
             ],
+            'requiresConfirmation' => config('fortify.features.two-factor-authentication.confirmPassword', false),
+            'twoFactorEnabled' => ! is_null($user->two_factor_secret),
         ]);
     }
 

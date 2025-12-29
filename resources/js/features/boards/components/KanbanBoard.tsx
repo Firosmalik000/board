@@ -148,15 +148,68 @@ export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard, f
   return (
     <div className="flex flex-col h-full">
       {/* Board Content */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden p-4">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden p-2 sm:p-4">
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="all-lists" direction="horizontal" type="list">
             {(provided) => (
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className="flex h-full gap-4"
+                className="flex h-full gap-2 sm:gap-4"
               >
+                {/* Add List Button - Moved to the left */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="w-72 sm:w-80 shrink-0"
+                >
+              {isAddingList ? (
+                <div className="rounded-lg bg-muted/50 p-2 sm:p-3">
+                  <Input
+                    placeholder="Enter list title..."
+                    value={newListTitle}
+                    onChange={(e) => setNewListTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAddList()
+                      if (e.key === 'Escape') {
+                        setIsAddingList(false)
+                        setNewListTitle('')
+                      }
+                    }}
+                    autoFocus
+                    disabled={isLoading}
+                    className="text-sm"
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <Button onClick={handleAddList} size="sm" className="flex-1 text-xs sm:text-sm" disabled={isLoading}>
+                      Add List
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setIsAddingList(false)
+                        setNewListTitle('')
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      disabled={isLoading}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  onClick={() => setIsAddingList(true)}
+                  variant="secondary"
+                  className="w-full justify-start text-xs sm:text-sm"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Add another list</span>
+                  <span className="sm:hidden">Add list</span>
+                </Button>
+              )}
+                </motion.div>
+
                 <AnimatePresence>
                   {board.lists?.map((list, index) => (
                     <Draggable key={list.id} draggableId={`list-${list.id}`} index={index}>
@@ -182,57 +235,6 @@ export function KanbanBoard({ board, onBoardUpdate, onCardClick, onCreateCard, f
                   ))}
                 </AnimatePresence>
                 {provided.placeholder}
-
-                {/* Add List Button */}
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="w-80 shrink-0"
-                >
-              {isAddingList ? (
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <Input
-                    placeholder="Enter list title..."
-                    value={newListTitle}
-                    onChange={(e) => setNewListTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleAddList()
-                      if (e.key === 'Escape') {
-                        setIsAddingList(false)
-                        setNewListTitle('')
-                      }
-                    }}
-                    autoFocus
-                    disabled={isLoading}
-                  />
-                  <div className="mt-2 flex gap-2">
-                    <Button onClick={handleAddList} size="sm" className="flex-1" disabled={isLoading}>
-                      Add List
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setIsAddingList(false)
-                        setNewListTitle('')
-                      }}
-                      variant="ghost"
-                      size="sm"
-                      disabled={isLoading}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  onClick={() => setIsAddingList(true)}
-                  variant="secondary"
-                  className="w-full justify-start"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add another list
-                </Button>
-              )}
-                </motion.div>
               </div>
             )}
           </Droppable>

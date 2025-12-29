@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import { Button } from './button'
 import { cn } from '@/lib/utils'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Input } from './input'
 import {
   Popover,
@@ -47,24 +47,27 @@ export function RichTextEditor({
   const [linkUrl, setLinkUrl] = useState('')
   const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false)
 
+  // Memoize extensions to prevent re-creation on every render
+  const extensions = useMemo(() => [
+    StarterKit.configure({
+      heading: {
+        levels: [1, 2, 3],
+      },
+    }),
+    Underline,
+    Link.configure({
+      openOnClick: false,
+      HTMLAttributes: {
+        class: 'text-primary underline cursor-pointer',
+      },
+    }),
+    Placeholder.configure({
+      placeholder,
+    }),
+  ], [placeholder])
+
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3],
-        },
-      }),
-      Underline,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-primary underline cursor-pointer',
-        },
-      }),
-      Placeholder.configure({
-        placeholder,
-      }),
-    ],
+    extensions,
     content,
     editable,
     onUpdate: ({ editor }) => {

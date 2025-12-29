@@ -15,9 +15,10 @@ import {
 interface BoardShowProps {
   board: Board
   activities: any[]
+  totalActivities: number
 }
 
-export default function BoardShow({ board: initialBoard, activities }: BoardShowProps) {
+export default function BoardShow({ board: initialBoard, activities, totalActivities }: BoardShowProps) {
   const [isPolling, setIsPolling] = useState(true)
   const [lastSyncTime, setLastSyncTime] = useState(new Date())
   const [filterByUser, setFilterByUser] = useState<number | null>(null)
@@ -129,8 +130,10 @@ export default function BoardShow({ board: initialBoard, activities }: BoardShow
             isPolling={isPolling}
             onTogglePolling={() => setIsPolling(!isPolling)}
             activities={activities || []}
+            totalActivities={totalActivities}
             filterByUser={filterByUser}
             onFilterChange={setFilterByUser}
+            onCardClick={(cardId) => handleCardClick(cardId, initialBoard.lists || [])}
           />
           <div className="flex-1 min-h-0">
             <KanbanBoard

@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -147,19 +147,22 @@ export function CardDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[95vh] min-w-[60vw] w-[1600px] overflow-y-auto border-0 shadow-2xl bg-gradient-to-br from-background via-background to-background/95">
+      <DialogContent className="max-h-[95vh] w-full max-w-full sm:max-w-[95vw] sm:min-w-[60vw] sm:w-[1600px] overflow-y-auto border-0 shadow-2xl bg-gradient-to-br from-background via-background to-background/95 p-3 sm:p-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="space-y-6"
+          className="space-y-4 sm:space-y-6"
         >
-          <DialogHeader className="border-b pb-5">
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+          <DialogHeader className="border-b pb-3 sm:pb-5">
+            <DialogTitle className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
               {cardMode === 'create' ? '✨ Create New Card' : selectedCard.title || 'Edit Card'}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              {cardMode === 'create' ? 'Create a new card with details, attachments, and assignments' : 'View and edit card details, manage attachments, checklists, and comments'}
+            </DialogDescription>
             {cardMode === 'view' && selectedCard.list && (
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-2">
+              <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 mt-2">
                 <span className="text-muted-foreground/50">in</span>
                 <span className="font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary">{selectedCard.list?.title}</span>
               </p>
@@ -167,11 +170,11 @@ export function CardDetailModal({
           </DialogHeader>
 
           {/* Card Details */}
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="space-y-6 md:col-span-2">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
+            <div className="space-y-4 sm:space-y-6 lg:col-span-2">
               {/* Title */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold flex items-center gap-2">
+              <div className="space-y-2 sm:space-y-3">
+                <Label className="text-sm sm:text-base font-semibold flex items-center gap-2">
                   <span className="text-primary">●</span> Title
                   <span className="text-xs text-destructive">*</span>
                 </Label>
@@ -179,16 +182,16 @@ export function CardDetailModal({
                   value={selectedCard.title || ''}
                   onChange={(e) => onFieldChange('title', e.target.value)}
                   placeholder="Enter a descriptive title for this card..."
-                  className="h-11 text-base border-border/50 focus:border-primary shadow-sm"
+                  className="h-9 sm:h-11 text-sm sm:text-base border-border/50 focus:border-primary shadow-sm"
                 />
               </div>
 
               {/* Description */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-primary" />
+              <div className="space-y-2 sm:space-y-3">
+                <Label className="text-sm sm:text-base font-semibold flex items-center gap-2">
+                  <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
                   Description
-                  <span className="text-xs text-muted-foreground font-normal ml-auto">
+                  <span className="text-xs text-muted-foreground font-normal ml-auto hidden sm:inline">
                     Rich text editor
                   </span>
                 </Label>
@@ -197,19 +200,19 @@ export function CardDetailModal({
                     content={selectedCard.description || ''}
                     onChange={(content) => onFieldChange('description', content)}
                     placeholder="Add detailed information, requirements, or notes... Use the toolbar to format text."
-                    className="min-h-[200px]"
+                    className="min-h-[150px] sm:min-h-[200px]"
                   />
                 </div>
               </div>
 
               {/* Attachments */}
               <div>
-                <Label className="text-base font-semibold">
-                  <Paperclip className="mr-2 inline h-4 w-4" />
+                <Label className="text-sm sm:text-base font-semibold">
+                  <Paperclip className="mr-2 inline h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Attachments
                 </Label>
 
-                <div className="mt-4 space-y-3">
+                <div className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
                   {/* Pending files (create mode only) */}
                   {cardMode === 'create' && pendingFiles.length > 0 && (
                     <>
@@ -346,11 +349,11 @@ export function CardDetailModal({
               {/* Comments - Only show in view mode */}
               {cardMode === 'view' && (
                 <div>
-                  <Label className="text-base font-semibold">
-                    <MessageSquare className="mr-2 inline h-4 w-4" />
+                  <Label className="text-sm sm:text-base font-semibold">
+                    <MessageSquare className="mr-2 inline h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     Comments ({selectedCard.comments?.length || 0})
                   </Label>
-                  <div className="mt-4 space-y-4">
+                  <div className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
                     {selectedCard.comments?.map((comment: any) => (
                       <CommentItem key={comment.id} comment={comment} boardMembers={boardMembers} />
                     ))}
@@ -609,22 +612,23 @@ export function CardDetailModal({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-between gap-3 border-t border-border/50 pt-6 mt-8">
+          <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-3 border-t border-border/50 pt-4 sm:pt-6 mt-6 sm:mt-8">
             {/* Delete Button - Only in view mode */}
             {cardMode === 'view' && onDeleteCard && (
-              <Button variant="destructive" onClick={onDeleteCard} className="gap-2 shadow-sm hover:shadow">
-                <Trash2 className="h-4 w-4" />
-                Delete Card
+              <Button variant="destructive" onClick={onDeleteCard} className="gap-2 shadow-sm hover:shadow text-xs sm:text-sm">
+                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Delete Card</span>
+                <span className="sm:hidden">Delete</span>
               </Button>
             )}
-            <div className={`flex gap-3 ${cardMode === 'create' ? 'w-full justify-end' : 'ml-auto'}`}>
-              <Button variant="outline" onClick={onClose} className="min-w-[100px] shadow-sm">
+            <div className={`flex gap-2 sm:gap-3 ${cardMode === 'create' ? 'w-full justify-end' : 'sm:ml-auto'}`}>
+              <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none sm:min-w-[100px] shadow-sm text-xs sm:text-sm h-9 sm:h-10">
                 Cancel
               </Button>
               <Button
                 onClick={onSave}
                 disabled={(cardMode === 'create' && !selectedCard.title?.trim()) || isSaving}
-                className="min-w-[140px] gap-2 shadow-sm hover:shadow"
+                className="flex-1 sm:flex-none sm:min-w-[140px] gap-2 shadow-sm hover:shadow text-xs sm:text-sm h-9 sm:h-10"
               >
                 {isSaving ? (
                   <>
@@ -633,7 +637,7 @@ export function CardDetailModal({
                   </>
                 ) : (
                   <>
-                    {cardMode === 'create' ? '✨ Create Card' : '💾 Save Changes'}
+                    {cardMode === 'create' ? '✨ Create' : '💾 Save'}
                   </>
                 )}
               </Button>
