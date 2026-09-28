@@ -30,13 +30,13 @@ import {
     AlertTriangle,
     ArrowLeft,
     CheckCircle2,
+    CheckSquare,
     Clock,
-    Download,
+    FileDown,
     FileText,
     Filter,
     Layers,
     Paperclip,
-    Printer,
     Search,
     Users,
 } from 'lucide-react';
@@ -63,6 +63,21 @@ interface BoardReportProps {
 }
 
 type PeriodFilter = 'all' | 'today' | 'week' | 'month';
+
+// Helper to strip rich text HTML tags and entities so raw <p> tags don't leak into the report
+const stripHtml = (html?: string | null): string => {
+    if (!html) return '';
+    return html
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+};
 
 export default function BoardReport({
     board,
@@ -142,8 +157,8 @@ export default function BoardReport({
             if (searchQuery.trim()) {
                 const query = searchQuery.toLowerCase();
                 const matchTitle = card.title?.toLowerCase().includes(query);
-                const matchDesc = card.description
-                    ?.toLowerCase()
+                const matchDesc = stripHtml(card.description)
+                    .toLowerCase()
                     .includes(query);
                 const matchList = card.listTitle?.toLowerCase().includes(query);
                 if (!matchTitle && !matchDesc && !matchList) return false;
@@ -244,11 +259,6 @@ export default function BoardReport({
         });
     }, [board.lists, filteredCards]);
 
-    // Trigger Print / PDF download
-    const handlePrint = () => {
-        window.print();
-    };
-
     // Exact period label with date range as requested:
     // "xbayar report tanggal berapa dan berapa"
     const getPeriodFormattedRange = (p: PeriodFilter) => {
@@ -271,40 +281,331 @@ export default function BoardReport({
         }
     };
 
-    const currentDateFormatted = format(new Date(), 'dd MMMM yyyy, HH:mm');
+    // Dedicated Standalone PDF Template Generator (Clean, Table-based, Printable)
+    const handleExportPDF = () => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            window.print();
+            return;
+        }
 
+        const taskRowsHtml = filteredCards
+            .map((card, idx) => {
+                const isOverdue =
+                    card.due_date &&
+                    !card.is_completed &&
+                    new Date(card.due_date) < now;
+                const listName =
+                    board.lists?.find((l) => l.id === card.board_list_id)?.title ||
+                    '-';
+                const cleanDesc = stripHtml(card.description);
+                const picNames =
+                    card.members?.map((m: any) => m.name).join(', ') || '-';
+                const formattedDate = card.due_date
+                    ? format(new Date(card.due_date), 'dd MMM yyyy')
+                    : '-';
+                const statusBadge = card.is_completed
+                    ? '<span class="badge badge-success">Selesai</span>'
+                    : isOverdue
+                      ? '<span class="badge badge-danger">Overdue</span>'
+                      : '<span class="badge badge-info">Berjalan</span>';
 
-    const handleExportCSV = () => {
-        const headers = [
-            'No',
-            'Judul Tugas',
-            'Kolom / Status',
-            'Tenggat Waktu',
-            'PIC / Anggota',
-            'Status',
-        ];
-        const rows = filteredCards.map((c, idx) => [
-            idx + 1,
-            `"${(c.title || '').replace(/"/g, '""')}"`,
-            `"${(c.listTitle || '').replace(/"/g, '""')}"`,
-            c.due_date ? format(new Date(c.due_date), 'yyyy-MM-dd') : '-',
-            `"${(c.members?.map((m: any) => m.name).join(', ') || '-').replace(/"/g, '""')}"`,
-            c.is_completed ? 'Selesai' : 'Sedang Berjalan',
-        ]);
-        const csvContent =
-            'data:text/csv;charset=utf-8,\uFEFF' +
-            [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement('a');
-        link.setAttribute('href', encodedUri);
-        link.setAttribute(
-            'download',
-            `${board.title.replace(/\s+/g, '_')}_Report_${format(new Date(), 'yyyy-MM-dd')}.csv`,
-        );
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success('Laporan CSV berhasil diunduh');
+                // Sub-task Checklists HTML inside PDF table
+                let checklistHtml = '';
+                if (card.checklists && card.checklists.length > 0) {
+                    const completed = card.checklists.filter((i: any) => i.is_completed).length;
+                    const items = card.checklists
+                        .map(
+                            (item: any) =>
+                                `<div class="checklist-item ${item.is_completed ? 'done' : ''}">
+                                    <span class="chk-box">${item.is_completed ? '☑' : '☐'}</span>
+                                    <span>${item.title}</span>
+                                </div>`,
+                        )
+                        .join('');
+                    checklistHtml = `
+                        <div class="checklist-box">
+                            <div class="checklist-title">Checklist (${completed}/${card.checklists.length}):</div>
+                            <div class="checklist-items">${items}</div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <tr>
+                        <td style="text-align:center;font-weight:600;color:#64748b;">${idx + 1}</td>
+                        <td>
+                            <div style="font-weight:700;font-size:11px;color:${card.is_completed ? '#64748b;text-decoration:line-through;' : '#0f172a;'}">${card.title}</div>
+                            ${cleanDesc ? `<div style="color:#64748b;font-size:10px;margin-top:2px;line-height:1.35;">${cleanDesc}</div>` : ''}
+                            ${checklistHtml}
+                        </td>
+                        <td style="font-weight:500;">${listName}</td>
+                        <td>${picNames}</td>
+                        <td style="white-space:nowrap;color:${isOverdue ? '#be123c;font-weight:700;' : 'inherit;'}">${formattedDate}</td>
+                        <td style="text-align:center;">${statusBadge}</td>
+                    </tr>
+                `;
+            })
+            .join('');
+
+        const html = `<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <title>${board.title} - Laporan Firlabs Board</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 14mm 12mm 14mm 12mm;
+        }
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+        }
+        .logo-img {
+            height: 32px;
+            object-fit: contain;
+            margin-bottom: 6px;
+        }
+        .report-title {
+            font-size: 20px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+            margin: 0 0 4px 0;
+            color: #0f172a;
+        }
+        .report-sub {
+            font-size: 10.5px;
+            color: #475569;
+            font-weight: 500;
+        }
+        .header-meta {
+            text-align: right;
+            font-size: 10px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+        .kpi-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .kpi-col {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+        .kpi-col.green {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+        .kpi-col.blue {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1e40af;
+        }
+        .kpi-col.red {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+        .kpi-label {
+            font-size: 9.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .kpi-number {
+            font-size: 18px;
+            font-weight: 800;
+            margin-top: 2px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10.5px;
+            margin-bottom: 24px;
+        }
+        th {
+            background: #f1f5f9;
+            color: #334155;
+            font-weight: 700;
+            text-align: left;
+            padding: 8px 10px;
+            border: 1px solid #cbd5e1;
+            text-transform: uppercase;
+            font-size: 9.5px;
+            letter-spacing: 0.03em;
+        }
+        td {
+            padding: 7px 10px;
+            border: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+        tr:nth-child(even) {
+            background: #fafafa;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        .badge-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+        .badge-info { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .checklist-box {
+            margin-top: 6px;
+            padding: 6px 8px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 3px solid #0052cc;
+            border-radius: 4px;
+        }
+        .checklist-title {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 3px;
+        }
+        .checklist-items {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px 8px;
+        }
+        .checklist-item {
+            font-size: 9.5px;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .checklist-item.done {
+            text-decoration: line-through;
+            color: #94a3b8;
+        }
+        .chk-box {
+            font-weight: bold;
+            font-size: 10px;
+        }
+        .watermark-footer {
+            margin-top: 30px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 16px;
+            page-break-inside: avoid;
+        }
+        .watermark-logo {
+            height: 26px;
+            object-fit: contain;
+            margin-bottom: 4px;
+        }
+        .watermark-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #334155;
+        }
+        .watermark-meta {
+            font-size: 9.5px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <img src="/brand/logo-horizontal-navy.png" alt="Firlabs Board" class="logo-img" onerror="this.style.display='none'">
+            <div class="report-title">${board.title} Report</div>
+            <div class="report-sub">${getPeriodFormattedRange(period)}</div>
+        </div>
+        <div class="header-meta">
+            <div><strong>ID Board:</strong> #${board.id}</div>
+            <div><strong>Dicetak:</strong> ${currentDateFormatted}</div>
+            <div><strong>Project Owner:</strong> ${board.owner?.name || '-'}</div>
+            <div><strong>Total Tugas:</strong> ${totalCardsCount} Kartu</div>
+        </div>
+    </div>
+
+    <div class="kpi-row">
+        <div class="kpi-col">
+            <div class="kpi-label">Total Tugas</div>
+            <div class="kpi-number">${totalCardsCount}</div>
+        </div>
+        <div class="kpi-col green">
+            <div class="kpi-label">Penyelesaian</div>
+            <div class="kpi-number">${completionRate}% <span style="font-size:11px;font-weight:500;">(${completedCardsCount}/${totalCardsCount})</span></div>
+        </div>
+        <div class="kpi-col blue">
+            <div class="kpi-label">Sedang Berjalan</div>
+            <div class="kpi-number">${inProgressCardsCount}</div>
+        </div>
+        <div class="kpi-col red">
+            <div class="kpi-label">Lewat Tenggat</div>
+            <div class="kpi-number">${overdueCardsCount}</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width:30px;text-align:center;">#</th>
+                <th>Tugas / Judul & Sub-task Checklist</th>
+                <th style="width:90px;">Kolom List</th>
+                <th style="width:110px;">PIC</th>
+                <th style="width:85px;">Tenggat</th>
+                <th style="width:80px;text-align:center;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${taskRowsHtml || '<tr><td colspan="6" style="text-align:center;padding:20px;color:#94a3b8;">Tidak ada tugas ditemukan.</td></tr>'}
+        </tbody>
+    </table>
+
+    <div class="watermark-footer">
+        <img src="/brand/logo-horizontal-navy.png" alt="Firlabs Board" class="watermark-logo" onerror="this.style.display='none'">
+        <div class="watermark-title">Powered by Firlabs Board</div>
+        <div class="watermark-meta">Dokumen Laporan Resmi • ID Board #${board.id} • ${currentDateFormatted}</div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.focus();
+                window.print();
+            }, 400);
+        };
+    </script>
+</body>
+</html>`;
+
+        printWindow.document.open();
+        printWindow.document.write(html);
+        printWindow.document.close();
     };
 
     return (
@@ -371,7 +672,7 @@ export default function BoardReport({
                             </p>
                             {board.description && (
                                 <p className="mt-0.5 max-w-xl text-[11px] text-slate-500">
-                                    {board.description}
+                                    {stripHtml(board.description)}
                                 </p>
                             )}
                         </div>
@@ -428,24 +729,13 @@ export default function BoardReport({
 
                     <div className="flex flex-wrap items-center gap-2.5">
                         <Button
-                            variant="outline"
                             size="sm"
-                            onClick={handleExportCSV}
-                            className="gap-2 border-border bg-background text-xs font-medium text-foreground shadow-xs hover:bg-muted"
-                            title="Unduh data laporan langsung ke file spreadsheet CSV"
+                            onClick={handleExportPDF}
+                            className="gap-2 bg-[#0052cc] text-xs font-semibold text-white shadow-xs hover:bg-[#0747a6]"
+                            title="Unduh laporan dokumen resmi dalam format PDF yang rapi"
                         >
-                            <Download className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span>Export CSV</span>
-                        </Button>
-
-                        <Button
-                            size="sm"
-                            onClick={handlePrint}
-                            className="gap-2 bg-[#0052cc] text-xs font-medium text-white shadow-xs hover:bg-[#0747a6]"
-                            title="Buka dialog cetak lalu pilih opsi 'Save as PDF' untuk menyimpan sebagai berkas PDF"
-                        >
-                            <Printer className="h-3.5 w-3.5" />
-                            <span>Cetak / Simpan PDF</span>
+                            <FileDown className="h-3.5 w-3.5" />
+                            <span>Export PDF</span>
                         </Button>
                     </div>
                 </div>
@@ -875,9 +1165,42 @@ export default function BoardReport({
                                                                 )}
                                                         </div>
                                                         {card.description && (
-                                                            <p className="line-clamp-1 text-[11px] text-muted-foreground">
-                                                                {card.description}
+                                                            <p className="line-clamp-2 text-[11px] text-muted-foreground">
+                                                                {stripHtml(card.description)}
                                                             </p>
+                                                        )}
+                                                        {card.checklists && card.checklists.length > 0 && (
+                                                            <div className="mt-1.5 space-y-1 rounded-md border border-border/50 bg-muted/30 p-2 text-[10px]">
+                                                                <div className="flex items-center gap-1 font-semibold text-muted-foreground">
+                                                                    <CheckSquare className="h-3 w-3 text-primary" />
+                                                                    <span>
+                                                                        Checklist ({card.checklists.filter((i: any) => i.is_completed).length}/{card.checklists.length}):
+                                                                    </span>
+                                                                </div>
+                                                                <div className="grid grid-cols-1 gap-x-2 gap-y-0.5 pt-0.5 sm:grid-cols-2">
+                                                                    {card.checklists.map((item: any) => (
+                                                                        <div
+                                                                            key={item.id}
+                                                                            className={`flex items-center gap-1.5 ${
+                                                                                item.is_completed
+                                                                                    ? 'text-muted-foreground line-through'
+                                                                                    : 'text-foreground'
+                                                                            }`}
+                                                                        >
+                                                                            <span
+                                                                                className={`text-[10px] font-bold ${
+                                                                                    item.is_completed
+                                                                                        ? 'text-emerald-600'
+                                                                                        : 'text-slate-400'
+                                                                                }`}
+                                                                            >
+                                                                                {item.is_completed ? '☑' : '☐'}
+                                                                            </span>
+                                                                            <span className="truncate">{item.title}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
                                                         )}
                                                         {card.labels && card.labels.length > 0 && (
                                                             <div className="flex flex-wrap gap-1 pt-0.5">
