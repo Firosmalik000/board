@@ -1,4 +1,3 @@
-import { Icon } from '../common/icon';
 import {
     SidebarGroup,
     SidebarGroupContent,
@@ -8,6 +7,7 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { type ComponentPropsWithoutRef } from 'react';
+import { Icon } from '../common/icon';
 
 export function NavFooter({
     items,

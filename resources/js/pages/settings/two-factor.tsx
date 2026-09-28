@@ -1,5 +1,8 @@
+import {
+    TwoFactorRecoveryCodes,
+    TwoFactorSetupModal,
+} from '@/components/shared/auth';
 import { HeadingSmall } from '@/components/shared/common';
-import { TwoFactorRecoveryCodes, TwoFactorSetupModal } from '@/components/shared/auth';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth';

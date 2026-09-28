@@ -1,5 +1,5 @@
-import { NavFooter, NavMain, NavUser } from '@/components/shared/navigation';
 import { AppLogo } from '@/components/shared/common';
+import { NavMain, NavUser } from '@/components/shared/navigation';
 import {
     Sidebar,
     SidebarContent,

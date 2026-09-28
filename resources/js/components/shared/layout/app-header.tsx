@@ -1,5 +1,5 @@
-import { Breadcrumbs } from '@/components/shared/navigation';
 import { Icon } from '@/components/shared/common';
+import { Breadcrumbs } from '@/components/shared/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,13 +26,13 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { UserMenuContent, AppLogo, AppLogoIcon } from '../common';
 import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
+import { AppLogo, AppLogoIcon, UserMenuContent } from '../common';
 
 const mainNavItems: NavItem[] = [
     {
@@ -244,7 +244,11 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                 >
                                     <Avatar className="size-8 overflow-hidden rounded-full">
                                         <AvatarImage
-                                            src={auth.user.avatar ? `/storage/${auth.user.avatar}` : undefined}
+                                            src={
+                                                auth.user.avatar
+                                                    ? `/storage/${auth.user.avatar}`
+                                                    : undefined
+                                            }
                                             alt={auth.user.name}
                                         />
                                         <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">

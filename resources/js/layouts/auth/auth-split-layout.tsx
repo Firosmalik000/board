@@ -14,7 +14,7 @@ export default function AuthSplitLayout({
     title,
     description,
 }: PropsWithChildren<AuthLayoutProps>) {
-    const { name, quote } = usePage<SharedData>().props;
+    const { quote } = usePage<SharedData>().props;
 
     return (
         <div className="relative grid h-dvh flex-col items-center justify-center px-8 sm:px-0 lg:max-w-none lg:grid-cols-2 lg:px-0">
@@ -24,7 +24,7 @@ export default function AuthSplitLayout({
                     href={home()}
                     className="relative z-20 flex items-center text-lg font-medium"
                 >
-                    <BrandLogo variant="white" className="h-8 w-auto mr-3" />
+                    <BrandLogo variant="white" className="mr-3 h-8 w-auto" />
                 </Link>
                 {quote && (
                     <div className="relative z-20 mt-auto">

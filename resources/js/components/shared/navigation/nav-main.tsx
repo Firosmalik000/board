@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
     SidebarGroup,
     SidebarGroupLabel,
@@ -14,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
+import { useState } from 'react';
 
 export function NavMain({ items = [] }: { items: NavItem[] }) {
     const page = usePage<SharedData>();
@@ -58,7 +58,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                     >
                                         <ChevronRight
                                             className={cn(
-                                                'size-3.5 transition-transform duration-200 text-muted-foreground',
+                                                'size-3.5 text-muted-foreground transition-transform duration-200',
                                                 boardsOpen && 'rotate-90',
                                             )}
                                         />
@@ -66,10 +66,11 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                 )}
 
                                 {hasBoards && boardsOpen && (
-                                    <SidebarMenuSub className="my-1 max-h-60 overflow-y-auto space-y-0.5">
+                                    <SidebarMenuSub className="my-1 max-h-60 space-y-0.5 overflow-y-auto">
                                         {boards.map((board) => {
                                             const isBoardActive =
-                                                page.url === `/boards/${board.id}` ||
+                                                page.url ===
+                                                    `/boards/${board.id}` ||
                                                 page.url.startsWith(
                                                     `/boards/${board.id}/`,
                                                 );
@@ -85,16 +86,16 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                                         className={cn(
                                                             'h-7 rounded-md transition-colors',
                                                             isBoardActive &&
-                                                                'font-semibold text-primary bg-primary/10',
+                                                                'bg-primary/10 font-semibold text-primary',
                                                         )}
                                                     >
                                                         <Link
                                                             href={`/boards/${board.id}`}
                                                             prefetch
-                                                            className="flex items-center gap-2 group/board-link min-w-0"
+                                                            className="group/board-link flex min-w-0 items-center gap-2"
                                                         >
                                                             <span
-                                                                className="size-2 rounded-[2px] shrink-0 shadow-xs ring-1 ring-black/10 group-hover/board-link:scale-110 transition-transform"
+                                                                className="size-2 shrink-0 rounded-[2px] shadow-xs ring-1 ring-black/10 transition-transform group-hover/board-link:scale-110"
                                                                 style={{
                                                                     backgroundColor:
                                                                         board.background_color ||

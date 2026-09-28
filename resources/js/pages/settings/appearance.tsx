@@ -1,7 +1,6 @@
 import { Head } from '@inertiajs/react';
 
-import { AppearanceTabs } from '@/components/shared/common';
-import { HeadingSmall } from '@/components/shared/common';
+import { AppearanceTabs, HeadingSmall } from '@/components/shared/common';
 import { type BreadcrumbItem } from '@/types';
 
 import AppLayout from '@/layouts/app-layout';

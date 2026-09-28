@@ -1,15 +1,15 @@
 // Re-export common components
 // Default exports
-export { default as AppLogo } from './app-logo'
-export { default as AppLogoIcon } from './app-logo-icon'
-export { BrandLogo, default as BrandLogoDefault } from './brand-logo'
-export { default as Heading } from './heading'
-export { default as HeadingSmall } from './heading-small'
-export { default as TextLink } from './text-link'
-export { default as AppearanceDropdown } from './appearance-dropdown'
-export { default as AppearanceTabs } from './appearance-tabs'
+export { default as AppLogo } from './app-logo';
+export { default as AppLogoIcon } from './app-logo-icon';
+export { default as AppearanceDropdown } from './appearance-dropdown';
+export { default as AppearanceTabs } from './appearance-tabs';
+export { BrandLogo, default as BrandLogoDefault } from './brand-logo';
+export { default as Heading } from './heading';
+export { default as HeadingSmall } from './heading-small';
+export { default as TextLink } from './text-link';
 
 // Named exports
-export { Icon } from './icon'
-export { UserInfo } from './user-info'
-export { UserMenuContent } from './user-menu-content'
+export { Icon } from './icon';
+export { UserInfo } from './user-info';
+export { UserMenuContent } from './user-menu-content';

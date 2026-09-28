@@ -4,8 +4,8 @@ import { login } from '@/routes';
 import { Form, Head } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 
-import { InputError } from '@/components/shared/form';
 import { TextLink } from '@/components/shared/common';
+import { InputError } from '@/components/shared/form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

@@ -1,17 +1,17 @@
 // Kanban Components
-export { KanbanBoard } from './KanbanBoard'
-export { KanbanList } from './KanbanList'
-export { KanbanCard } from './KanbanCard'
+export { KanbanBoard } from './KanbanBoard';
+export { KanbanCard } from './KanbanCard';
+export { KanbanList } from './KanbanList';
 
 // Board Components
-export { BoardHeader } from './BoardHeader'
+export { BoardHeader } from './BoardHeader';
 
 // Modals
-export { CardDetailModal } from './CardDetailModal'
-export { ImagePreviewModal } from './ImagePreviewModal'
+export { CardDetailModal } from './CardDetailModal';
+export { ImagePreviewModal } from './ImagePreviewModal';
 
 // Comment Components
-export { CommentItem } from './CommentItem'
+export { CommentItem } from './CommentItem';
 
 // Label Components
-export { LabelManager } from './LabelManager'
+export { LabelManager } from './LabelManager';

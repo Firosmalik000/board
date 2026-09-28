@@ -5,55 +5,62 @@
 ### ✨ Features
 
 #### Feature-Based Architecture
+
 - **NEW**: Dibuat folder `features/` untuk feature modules
 - **NEW**: Struktur `features/boards/` lengkap dengan:
-  - `components/` - 6 komponen kanban (KanbanBoard, KanbanList, KanbanCard, BoardHeader, CardDetailModal, ImagePreviewModal)
-  - `hooks/` - 2 custom hooks (useCardModal, useImagePreview)
-  - Barrel exports untuk clean imports
+    - `components/` - 6 komponen kanban (KanbanBoard, KanbanList, KanbanCard, BoardHeader, CardDetailModal, ImagePreviewModal)
+    - `hooks/` - 2 custom hooks (useCardModal, useImagePreview)
+    - Barrel exports untuk clean imports
 
 #### Shared Components Organization
+
 - **MOVED**: Semua shared components ke `components/shared/` dengan kategori:
-  - `layout/` - 5 komponen (AppHeader, AppSidebar, AppShell, AppContent, AppSidebarHeader)
-  - `navigation/` - 4 komponen (Breadcrumbs, NavMain, NavUser, NavFooter)
-  - `form/` - 2 komponen (InputError, AlertError)
-  - `common/` - 10 komponen (AppLogo, Heading, UserInfo, dll)
-  - `auth/` - 3 komponen (TwoFactorSetupModal, TwoFactorRecoveryCodes, DeleteUser)
+    - `layout/` - 5 komponen (AppHeader, AppSidebar, AppShell, AppContent, AppSidebarHeader)
+    - `navigation/` - 4 komponen (Breadcrumbs, NavMain, NavUser, NavFooter)
+    - `form/` - 2 komponen (InputError, AlertError)
+    - `common/` - 10 komponen (AppLogo, Heading, UserInfo, dll)
+    - `auth/` - 3 komponen (TwoFactorSetupModal, TwoFactorRecoveryCodes, DeleteUser)
 
 #### Custom Hooks
+
 - **NEW**: `useCardModal` - Mengelola state dan logic untuk card modal
-  - Card CRUD operations
-  - Comment management
-  - File attachment handling
-  - Modal state management
+    - Card CRUD operations
+    - Comment management
+    - File attachment handling
+    - Modal state management
 - **NEW**: `useImagePreview` - Mengelola state dan logic untuk image preview
-  - Zoom in/out functionality
-  - Image rotation
-  - Reset controls
+    - Zoom in/out functionality
+    - Image rotation
+    - Reset controls
 
 #### Modals as Separate Components
+
 - **NEW**: `CardDetailModal` - Extracted dari show.tsx
-  - Card detail editing
-  - Comments section
-  - Attachments management
-  - Category/list selection
+    - Card detail editing
+    - Comments section
+    - Attachments management
+    - Category/list selection
 - **NEW**: `ImagePreviewModal` - Extracted dari show.tsx
-  - Image zoom controls
-  - Image rotation
-  - Download functionality
+    - Image zoom controls
+    - Image rotation
+    - Download functionality
 
 ### 🔧 Improvements
 
 #### Code Quality
+
 - **IMPROVED**: `pages/boards/show.tsx` simplified dari **695 lines** → **124 lines** (-82% code reduction!)
 - **IMPROVED**: Separation of concerns - logic dipindah ke custom hooks
 - **IMPROVED**: All components now use barrel exports untuk cleaner imports
 
 #### Import Paths
+
 - **CHANGED**: 40+ files updated dengan import paths baru
 - **CHANGED**: Semua komponen sekarang menggunakan named exports
 - **CHANGED**: Internal imports dalam shared components menggunakan relative paths
 
 #### Developer Experience
+
 - **IMPROVED**: Autocomplete dan IntelliSense lebih baik
 - **IMPROVED**: Struktur folder yang lebih intuitif
 - **IMPROVED**: Easier to find dan maintain components
@@ -62,6 +69,7 @@
 ### 📝 Documentation
 
 #### New Documentation Files
+
 - **NEW**: `README.md` - Dokumentasi lengkap struktur dan best practices
 - **NEW**: `STRUCTURE.md` - Quick reference visual untuk struktur folder
 - **NEW**: `MIGRATION.md` - Panduan migration untuk update import paths
@@ -70,6 +78,7 @@
 ### 🗂️ File Structure
 
 #### Files Created (13 new files)
+
 ```
 features/boards/
 ├── components/
@@ -92,6 +101,7 @@ components/shared/
 ```
 
 #### Files Moved (50+ files)
+
 ```
 FROM: components/kanban/*
 TO:   features/boards/components/*
@@ -116,6 +126,7 @@ TO:   components/shared/auth/*.tsx
 ```
 
 #### Files Updated (40+ files)
+
 - All layout files (5 files)
 - All auth pages (7 files)
 - All settings pages (4 files)
@@ -124,28 +135,30 @@ TO:   components/shared/auth/*.tsx
 
 ### 📊 Statistics
 
-| Metric | Before | After | Change |
-|--------|--------|-------|--------|
-| `pages/boards/show.tsx` lines | 695 | 124 | -82% |
-| Total files created | - | 13 | +13 |
-| Total files moved | - | 50+ | - |
-| Total files updated | - | 40+ | - |
-| Documentation pages | 0 | 4 | +4 |
+| Metric                        | Before | After | Change |
+| ----------------------------- | ------ | ----- | ------ |
+| `pages/boards/show.tsx` lines | 695    | 124   | -82%   |
+| Total files created           | -      | 13    | +13    |
+| Total files moved             | -      | 50+   | -      |
+| Total files updated           | -      | 40+   | -      |
+| Documentation pages           | 0      | 4     | +4     |
 
 ### 🎯 Import Pattern Examples
 
 #### Before
+
 ```typescript
-import { KanbanBoard } from '@/components/kanban/KanbanBoard'
-import { AppHeader } from '@/components/app-header'
-import InputError from '@/components/input-error'
+import { KanbanBoard } from '@/components/kanban/KanbanBoard';
+import { AppHeader } from '@/components/app-header';
+import InputError from '@/components/input-error';
 ```
 
 #### After
+
 ```typescript
-import { KanbanBoard } from '@/features/boards'
-import { AppHeader } from '@/components/shared/layout'
-import { InputError } from '@/components/shared/form'
+import { KanbanBoard } from '@/features/boards';
+import { AppHeader } from '@/components/shared/layout';
+import { InputError } from '@/components/shared/form';
 ```
 
 ### ⚡ Breaking Changes
@@ -188,5 +201,5 @@ Untuk migrate ke struktur baru:
 
 ---
 
-*Generated: 2025-01-25*
-*Version: 1.0.0 - Major Restructure*
+_Generated: 2025-01-25_
+_Version: 1.0.0 - Major Restructure_

@@ -88,57 +88,63 @@ resources/js/
 ## 🎯 Import Patterns
 
 ### Feature Modules
+
 ```typescript
 // ✅ DO: Import dari feature barrel
 import {
-  KanbanBoard,
-  BoardHeader,
-  useCardModal,
-  useImagePreview
-} from '@/features/boards'
+    KanbanBoard,
+    BoardHeader,
+    useCardModal,
+    useImagePreview,
+} from '@/features/boards';
 
 // ❌ DON'T: Import langsung dari file
-import { KanbanBoard } from '@/features/boards/components/KanbanBoard'
+import { KanbanBoard } from '@/features/boards/components/KanbanBoard';
 ```
 
 ### Shared Components
+
 ```typescript
 // ✅ Layout Components
-import { AppHeader, AppSidebar } from '@/components/shared/layout'
+import { AppHeader, AppSidebar } from '@/components/shared/layout';
 
 // ✅ Navigation Components
-import { Breadcrumbs, NavMain } from '@/components/shared/navigation'
+import { Breadcrumbs, NavMain } from '@/components/shared/navigation';
 
 // ✅ Form Components
-import { InputError, AlertError } from '@/components/shared/form'
+import { InputError, AlertError } from '@/components/shared/form';
 
 // ✅ Common Components
-import { AppLogo, Heading, UserInfo } from '@/components/shared/common'
+import { AppLogo, Heading, UserInfo } from '@/components/shared/common';
 
 // ✅ Auth Components
-import { TwoFactorSetupModal, DeleteUser } from '@/components/shared/auth'
+import { TwoFactorSetupModal, DeleteUser } from '@/components/shared/auth';
 ```
 
 ### UI Components
+
 ```typescript
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Dialog } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Dialog } from '@/components/ui/dialog';
 ```
 
 ## 🗂️ Kapan Meletakkan Komponen Dimana?
 
 ### ➡️ Letakkan di `features/{feature}/components/`
+
 - Komponen **hanya digunakan dalam 1 fitur**
 - Memiliki business logic spesifik untuk fitur tersebut
 - Contoh: `KanbanCard`, `BoardHeader`
 
 ### ➡️ Letakkan di `components/shared/{category}/`
+
 - Komponen **digunakan di berbagai fitur/halaman**
 - Tidak memiliki business logic spesifik
 - Contoh: `AppHeader`, `Breadcrumbs`, `InputError`
 
 ### ➡️ Letakkan di `components/ui/`
+
 - Komponen UI primitif dari library (shadcn/ui)
 - Pure presentational components
 - Contoh: `Button`, `Card`, `Dialog`
@@ -146,18 +152,20 @@ import { Dialog } from '@/components/ui/dialog'
 ## 🎣 Custom Hooks
 
 ### ➡️ Feature-specific hooks → `features/{feature}/hooks/`
+
 ```typescript
 // features/boards/hooks/useCardModal.ts
 export function useCardModal() {
-  // Logic spesifik untuk card modal
+    // Logic spesifik untuk card modal
 }
 ```
 
 ### ➡️ Global hooks → `hooks/`
+
 ```typescript
 // hooks/use-mobile.tsx
 export function useMobile() {
-  // Logic global untuk detect mobile
+    // Logic global untuk detect mobile
 }
 ```
 
@@ -167,28 +175,28 @@ Setiap folder harus memiliki `index.ts` untuk export:
 
 ```typescript
 // features/boards/components/index.ts
-export { KanbanBoard } from './KanbanBoard'
-export { KanbanList } from './KanbanList'
-export { KanbanCard } from './KanbanCard'
-export { BoardHeader } from './BoardHeader'
-export { CardDetailModal } from './CardDetailModal'
-export { ImagePreviewModal } from './ImagePreviewModal'
+export { KanbanBoard } from './KanbanBoard';
+export { KanbanList } from './KanbanList';
+export { KanbanCard } from './KanbanCard';
+export { BoardHeader } from './BoardHeader';
+export { CardDetailModal } from './CardDetailModal';
+export { ImagePreviewModal } from './ImagePreviewModal';
 ```
 
 ## 🔍 Quick Search
 
-| Cari apa? | Lokasi |
-|-----------|--------|
-| Board components | `features/boards/components/` |
-| Board hooks | `features/boards/hooks/` |
-| Layout components | `components/shared/layout/` |
+| Cari apa?             | Lokasi                          |
+| --------------------- | ------------------------------- |
+| Board components      | `features/boards/components/`   |
+| Board hooks           | `features/boards/hooks/`        |
+| Layout components     | `components/shared/layout/`     |
 | Navigation components | `components/shared/navigation/` |
-| Form components | `components/shared/form/` |
-| Auth components | `components/shared/auth/` |
-| UI primitives | `components/ui/` |
-| Pages | `pages/` |
-| Global hooks | `hooks/` |
-| Utilities | `lib/` |
+| Form components       | `components/shared/form/`       |
+| Auth components       | `components/shared/auth/`       |
+| UI primitives         | `components/ui/`                |
+| Pages                 | `pages/`                        |
+| Global hooks          | `hooks/`                        |
+| Utilities             | `lib/`                          |
 
 ## ✨ Benefits
 

@@ -9,7 +9,8 @@ export type BrandLogoVariant =
     | 'stacked'
     | 'icon';
 
-export interface BrandLogoProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+export interface BrandLogoProps
+    extends React.ImgHTMLAttributes<HTMLImageElement> {
     variant?: BrandLogoVariant;
     size?: 'sm' | 'md' | 'lg' | 'xl' | 'custom';
     className?: string;
@@ -24,10 +25,30 @@ export function BrandLogo({
     ...props
 }: BrandLogoProps) {
     const sizeClasses = {
-        sm: variant === 'icon' ? 'h-6 w-6' : variant === 'stacked' ? 'h-10 w-auto' : 'h-5 w-auto',
-        md: variant === 'icon' ? 'h-8 w-8' : variant === 'stacked' ? 'h-14 w-auto' : 'h-7 w-auto',
-        lg: variant === 'icon' ? 'h-12 w-12' : variant === 'stacked' ? 'h-20 w-auto' : 'h-10 w-auto',
-        xl: variant === 'icon' ? 'h-16 w-16' : variant === 'stacked' ? 'h-28 w-auto' : 'h-14 w-auto',
+        sm:
+            variant === 'icon'
+                ? 'h-6 w-6'
+                : variant === 'stacked'
+                  ? 'h-10 w-auto'
+                  : 'h-5 w-auto',
+        md:
+            variant === 'icon'
+                ? 'h-8 w-8'
+                : variant === 'stacked'
+                  ? 'h-14 w-auto'
+                  : 'h-7 w-auto',
+        lg:
+            variant === 'icon'
+                ? 'h-12 w-12'
+                : variant === 'stacked'
+                  ? 'h-20 w-auto'
+                  : 'h-10 w-auto',
+        xl:
+            variant === 'icon'
+                ? 'h-16 w-16'
+                : variant === 'stacked'
+                  ? 'h-28 w-auto'
+                  : 'h-14 w-auto',
         custom: '',
     };
 
@@ -39,13 +60,19 @@ export function BrandLogo({
                 <img
                     src="/brand/logo-horizontal-color.png"
                     alt={alt}
-                    className={cn('object-contain dark:hidden select-none', appliedSize)}
+                    className={cn(
+                        'object-contain select-none dark:hidden',
+                        appliedSize,
+                    )}
                     {...props}
                 />
                 <img
                     src="/brand/logo-horizontal-white.png"
                     alt={alt}
-                    className={cn('object-contain hidden dark:block select-none', appliedSize)}
+                    className={cn(
+                        'hidden object-contain select-none dark:block',
+                        appliedSize,
+                    )}
                     {...props}
                 />
             </div>

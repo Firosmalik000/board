@@ -1,5 +1,5 @@
 // Re-export navigation components (using named exports from original files)
-export { NavMain } from './nav-main'
-export { NavUser } from './nav-user'
-export { NavFooter } from './nav-footer'
-export { Breadcrumbs } from './breadcrumbs'
+export { Breadcrumbs } from './breadcrumbs';
+export { NavFooter } from './nav-footer';
+export { NavMain } from './nav-main';
+export { NavUser } from './nav-user';

@@ -1,5 +1,5 @@
-import { InputError } from '@/components/shared/form';
 import { TextLink } from '@/components/shared/common';
+import { InputError } from '@/components/shared/form';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useState } from 'react';
 
 interface LoginProps {
@@ -29,7 +29,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
             <Head title="Log in" />
 
             {status && (
-                <div className="p-3 text-center text-xs font-medium text-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-300 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-center text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
                     {status}
                 </div>
             )}
@@ -44,11 +44,14 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                         <div className="space-y-4">
                             {/* Email Field */}
                             <div className="space-y-1.5">
-                                <Label htmlFor="email" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                <Label
+                                    htmlFor="email"
+                                    className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                >
                                     Email address
                                 </Label>
                                 <div className="relative">
-                                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                    <Mail className="absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
                                     <Input
                                         id="email"
                                         type="email"
@@ -58,7 +61,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                         tabIndex={1}
                                         autoComplete="email"
                                         placeholder="name@company.com"
-                                        className="pl-9 h-10 text-sm rounded-lg border-slate-300 dark:border-slate-700 focus-visible:ring-[#0052cc]"
+                                        className="h-10 rounded-lg border-slate-300 pl-9 text-sm focus-visible:ring-[#0052cc] dark:border-slate-700"
                                     />
                                 </div>
                                 <InputError message={errors.email} />
@@ -67,13 +70,16 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             {/* Password Field */}
                             <div className="space-y-1.5">
                                 <div className="flex items-center justify-between">
-                                    <Label htmlFor="password" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                    <Label
+                                        htmlFor="password"
+                                        className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                    >
                                         Password
                                     </Label>
                                     {canResetPassword && (
                                         <TextLink
                                             href={request()}
-                                            className="text-xs text-[#0052cc] hover:underline font-medium"
+                                            className="text-xs font-medium text-[#0052cc] hover:underline"
                                             tabIndex={5}
                                         >
                                             Forgot password?
@@ -81,21 +87,25 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     )}
                                 </div>
                                 <div className="relative">
-                                    <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                    <Lock className="absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
                                     <Input
                                         id="password"
-                                        type={showPassword ? 'text' : 'password'}
+                                        type={
+                                            showPassword ? 'text' : 'password'
+                                        }
                                         name="password"
                                         required
                                         tabIndex={2}
                                         autoComplete="current-password"
                                         placeholder="••••••••"
-                                        className="pl-9 pr-10 h-10 text-sm rounded-lg border-slate-300 dark:border-slate-700 focus-visible:ring-[#0052cc]"
+                                        className="h-10 rounded-lg border-slate-300 pr-10 pl-9 text-sm focus-visible:ring-[#0052cc] dark:border-slate-700"
                                     />
                                     <button
                                         type="button"
                                         className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                                        onClick={() => setShowPassword(!showPassword)}
+                                        onClick={() =>
+                                            setShowPassword(!showPassword)
+                                        }
                                         tabIndex={-1}
                                     >
                                         {showPassword ? (
@@ -114,9 +124,12 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     id="remember"
                                     name="remember"
                                     tabIndex={3}
-                                    className="data-[state=checked]:bg-[#0052cc] data-[state=checked]:border-[#0052cc]"
+                                    className="data-[state=checked]:border-[#0052cc] data-[state=checked]:bg-[#0052cc]"
                                 />
-                                <Label htmlFor="remember" className="text-xs font-normal text-slate-600 dark:text-slate-400 cursor-pointer">
+                                <Label
+                                    htmlFor="remember"
+                                    className="cursor-pointer text-xs font-normal text-slate-600 dark:text-slate-400"
+                                >
                                     Keep me logged in
                                 </Label>
                             </div>
@@ -125,7 +138,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                         {/* Submit button */}
                         <Button
                             type="submit"
-                            className="w-full h-10 bg-[#0052cc] hover:bg-[#0747a6] text-white font-medium rounded-lg shadow-sm transition-colors text-sm"
+                            className="h-10 w-full rounded-lg bg-[#0052cc] text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#0747a6]"
                             tabIndex={4}
                             disabled={processing}
                             data-test="login-button"
@@ -135,9 +148,13 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                         </Button>
 
                         {/* Sign up prompt */}
-                        <div className="text-center text-xs text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <div className="border-t border-slate-100 pt-2 text-center text-xs text-slate-500 dark:border-slate-800">
                             Don't have an account?{' '}
-                            <TextLink href={register()} tabIndex={5} className="font-semibold text-[#0052cc] hover:underline">
+                            <TextLink
+                                href={register()}
+                                tabIndex={5}
+                                className="font-semibold text-[#0052cc] hover:underline"
+                            >
                                 Sign up for free
                             </TextLink>
                         </div>

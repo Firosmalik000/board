@@ -15,8 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form } from '@inertiajs/react';
 import { useRef } from 'react';
-import { InputError } from '../form';
 import { HeadingSmall } from '../common';
+import { InputError } from '../form';
 
 export default function DeleteUser() {
     const passwordInput = useRef<HTMLInputElement>(null);
