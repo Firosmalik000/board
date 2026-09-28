@@ -51,6 +51,7 @@ export default function BoardShow({
         handleRemovePendingFile,
         handleAddPendingChecklist,
         handleRemovePendingChecklist,
+        handleEditPendingChecklist,
         handleDeleteCard,
         handleToggleMember,
         syncSelectedCard,
@@ -188,6 +189,7 @@ export default function BoardShow({
                 pendingChecklists={pendingChecklists}
                 onAddPendingChecklist={handleAddPendingChecklist}
                 onRemovePendingChecklist={handleRemovePendingChecklist}
+                onEditPendingChecklist={handleEditPendingChecklist}
                 fileInputRef={fileInputRef}
             />
 

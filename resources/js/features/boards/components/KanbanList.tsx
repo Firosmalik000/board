@@ -33,6 +33,7 @@ import { KanbanCard } from './KanbanCard';
 
 interface KanbanListProps {
     list: ListType;
+    allLists?: ListType[];
     onAddCard: (listId: number, title: string) => void;
     onCardClick: (cardId: number) => void;
     onCreateCard: (listId: number) => void;
@@ -46,9 +47,10 @@ interface KanbanListProps {
 export const KanbanList = React.memo(
     ({
         list,
+        allLists = [],
         onAddCard,
         onCardClick,
-        onCreateCard,
+        onCreateCard: _onCreateCard,
         onDeleteList,
         onEditList,
         dragHandleProps,
@@ -219,6 +221,8 @@ export const KanbanList = React.memo(
                                                 key={card.id}
                                                 card={card}
                                                 index={index}
+                                                currentListId={list.id}
+                                                allLists={allLists}
                                                 onClick={() =>
                                                     onCardClick(card.id)
                                                 }

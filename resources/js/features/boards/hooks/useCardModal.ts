@@ -136,7 +136,7 @@ export function useCardModal() {
                     } else {
                         failCount++;
                     }
-                } catch (error) {
+                } catch (_error) {
                     failCount++;
                 }
             }
@@ -373,6 +373,17 @@ export function useCardModal() {
         toast.success('Checklist item removed');
     };
 
+    const handleEditPendingChecklist = (index: number, newTitle: string) => {
+        if (!newTitle.trim()) {
+            toast.error('Checklist tidak boleh kosong');
+            return;
+        }
+        setPendingChecklists((prev) =>
+            prev.map((item, i) => (i === index ? newTitle.trim() : item)),
+        );
+        toast.success('Checklist diperbarui');
+    };
+
     const handleToggleMember = (userId: number) => {
         if (!selectedCard) return;
 
@@ -494,6 +505,7 @@ export function useCardModal() {
         handleRemovePendingFile,
         handleAddPendingChecklist,
         handleRemovePendingChecklist,
+        handleEditPendingChecklist,
         handleDeleteCard,
         handleToggleMember,
         syncSelectedCard,

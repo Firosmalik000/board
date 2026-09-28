@@ -29,11 +29,7 @@ import {
 import {
     AlertTriangle,
     ArrowLeft,
-    Calendar,
-    Check,
     CheckCircle2,
-    CheckSquare,
-    Circle,
     Clock,
     Download,
     FileText,
@@ -173,24 +169,6 @@ export default function BoardReport({
         return c.due_date && !c.is_completed && new Date(c.due_date) < now;
     }).length;
 
-    // Checklists stats
-    const totalChecklistsCount = filteredCards.reduce(
-        (acc, c) => acc + (c.checklists?.length || 0),
-        0,
-    );
-    const completedChecklistsCount = filteredCards.reduce(
-        (acc, c) =>
-            acc +
-            (c.checklists?.filter((item: any) => item.is_completed).length ||
-                0),
-        0,
-    );
-    const checklistCompletionRate =
-        totalChecklistsCount > 0
-            ? Math.round(
-                  (completedChecklistsCount / totalChecklistsCount) * 100,
-              )
-            : 0;
 
     // Member Performance Matrix
     const memberStats = useMemo(() => {
@@ -294,6 +272,40 @@ export default function BoardReport({
     };
 
     const currentDateFormatted = format(new Date(), 'dd MMMM yyyy, HH:mm');
+
+
+    const handleExportCSV = () => {
+        const headers = [
+            'No',
+            'Judul Tugas',
+            'Kolom / Status',
+            'Tenggat Waktu',
+            'PIC / Anggota',
+            'Status',
+        ];
+        const rows = filteredCards.map((c, idx) => [
+            idx + 1,
+            `"${(c.title || '').replace(/"/g, '""')}"`,
+            `"${(c.listTitle || '').replace(/"/g, '""')}"`,
+            c.due_date ? format(new Date(c.due_date), 'yyyy-MM-dd') : '-',
+            `"${(c.members?.map((m: any) => m.name).join(', ') || '-').replace(/"/g, '""')}"`,
+            c.is_completed ? 'Selesai' : 'Sedang Berjalan',
+        ]);
+        const csvContent =
+            'data:text/csv;charset=utf-8,\uFEFF' +
+            [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute(
+            'download',
+            `${board.title.replace(/\s+/g, '_')}_Report_${format(new Date(), 'yyyy-MM-dd')}.csv`,
+        );
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Laporan CSV berhasil diunduh');
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -418,20 +430,22 @@ export default function BoardReport({
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={handlePrint}
-                            className="gap-2 border-slate-300 bg-background font-medium text-foreground shadow-xs hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+                            onClick={handleExportCSV}
+                            className="gap-2 border-border bg-background text-xs font-medium text-foreground shadow-xs hover:bg-muted"
+                            title="Unduh data laporan langsung ke file spreadsheet CSV"
                         >
-                            <Printer className="h-4 w-4 text-slate-600 dark:text-slate-300" />
-                            <span>Print Preview</span>
+                            <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>Export CSV</span>
                         </Button>
 
                         <Button
                             size="sm"
                             onClick={handlePrint}
-                            className="gap-2 bg-[#0052cc] font-medium text-white shadow-sm hover:bg-[#0747a6]"
+                            className="gap-2 bg-[#0052cc] text-xs font-medium text-white shadow-xs hover:bg-[#0747a6]"
+                            title="Buka dialog cetak lalu pilih opsi 'Save as PDF' untuk menyimpan sebagai berkas PDF"
                         >
-                            <Download className="h-4 w-4" />
-                            <span>Download PDF</span>
+                            <Printer className="h-3.5 w-3.5" />
+                            <span>Cetak / Simpan PDF</span>
                         </Button>
                     </div>
                 </div>
@@ -531,106 +545,70 @@ export default function BoardReport({
                     </div>
                 </div>
 
-                {/* Executive KPI Summary Cards */}
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                {/* Executive KPI Summary Cards - Compact Single Row */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {/* Total Cards */}
                     <Card className="print-card border-border shadow-xs">
-                        <CardHeader className="flex flex-row items-center justify-between px-4 pt-3.5 pb-1">
+                        <CardHeader className="flex flex-row items-center justify-between px-3.5 pt-3 pb-1">
                             <CardTitle className="text-xs font-medium text-muted-foreground">
                                 Total Tugas
                             </CardTitle>
                             <Layers className="h-4 w-4 text-blue-600" />
                         </CardHeader>
-                        <CardContent className="px-4 pb-3.5">
-                            <div className="text-2xl font-bold tracking-tight text-foreground">
+                        <CardContent className="px-3.5 pb-3">
+                            <div className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
                                 {totalCardsCount}
                             </div>
-                            <p className="mt-0.5 text-[11px] text-muted-foreground">
-                                Dalam {board.lists?.length || 0} kolom list
-                            </p>
                         </CardContent>
                     </Card>
 
                     {/* Selesai / Completion Rate */}
                     <Card className="print-card border-emerald-500/20 bg-emerald-500/5 shadow-xs">
-                        <CardHeader className="flex flex-row items-center justify-between px-4 pt-3.5 pb-1">
+                        <CardHeader className="flex flex-row items-center justify-between px-3.5 pt-3 pb-1">
                             <CardTitle className="text-xs font-medium text-emerald-800 dark:text-emerald-300">
                                 Penyelesaian
                             </CardTitle>
                             <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                         </CardHeader>
-                        <CardContent className="px-4 pb-3.5">
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+                        <CardContent className="px-3.5 pb-3">
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-xl font-bold text-emerald-700 sm:text-2xl dark:text-emerald-300">
                                     {completionRate}%
                                 </span>
                                 <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                                     ({completedCardsCount}/{totalCardsCount})
                                 </span>
                             </div>
-                            <p className="mt-0.5 text-[11px] text-emerald-700/80 dark:text-emerald-400/80">
-                                Kartu selesai dikerjakan
-                            </p>
                         </CardContent>
                     </Card>
 
                     {/* Dalam Proses */}
                     <Card className="print-card border-blue-500/20 bg-blue-500/5 shadow-xs">
-                        <CardHeader className="flex flex-row items-center justify-between px-4 pt-3.5 pb-1">
+                        <CardHeader className="flex flex-row items-center justify-between px-3.5 pt-3 pb-1">
                             <CardTitle className="text-xs font-medium text-blue-800 dark:text-blue-300">
                                 Sedang Berjalan
                             </CardTitle>
                             <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </CardHeader>
-                        <CardContent className="px-4 pb-3.5">
-                            <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                        <CardContent className="px-3.5 pb-3">
+                            <div className="text-xl font-bold text-blue-700 sm:text-2xl dark:text-blue-300">
                                 {inProgressCardsCount}
                             </div>
-                            <p className="mt-0.5 text-[11px] text-blue-700/80 dark:text-blue-400/80">
-                                Kartu aktif di board
-                            </p>
                         </CardContent>
                     </Card>
 
                     {/* Overdue */}
                     <Card className="print-card border-rose-500/20 bg-rose-500/5 shadow-xs">
-                        <CardHeader className="flex flex-row items-center justify-between px-4 pt-3.5 pb-1">
+                        <CardHeader className="flex flex-row items-center justify-between px-3.5 pt-3 pb-1">
                             <CardTitle className="text-xs font-medium text-rose-800 dark:text-rose-300">
                                 Lewat Tenggat
                             </CardTitle>
                             <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
                         </CardHeader>
-                        <CardContent className="px-4 pb-3.5">
-                            <div className="text-2xl font-bold text-rose-700 dark:text-rose-300">
+                        <CardContent className="px-3.5 pb-3">
+                            <div className="text-xl font-bold text-rose-700 sm:text-2xl dark:text-rose-300">
                                 {overdueCardsCount}
                             </div>
-                            <p className="mt-0.5 text-[11px] text-rose-700/80 dark:text-rose-400/80">
-                                Perlu tindak lanjut cepat
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    {/* Checklist Progress */}
-                    <Card className="print-card border-border shadow-xs">
-                        <CardHeader className="flex flex-row items-center justify-between px-4 pt-3.5 pb-1">
-                            <CardTitle className="text-xs font-medium text-muted-foreground">
-                                Sub-task Checklist
-                            </CardTitle>
-                            <CheckSquare className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                        </CardHeader>
-                        <CardContent className="px-4 pb-3.5">
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-2xl font-bold text-foreground">
-                                    {checklistCompletionRate}%
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                    ({completedChecklistsCount}/
-                                    {totalChecklistsCount})
-                                </span>
-                            </div>
-                            <p className="mt-0.5 text-[11px] text-muted-foreground">
-                                Total butir checklist
-                            </p>
                         </CardContent>
                     </Card>
                 </div>
@@ -819,339 +797,220 @@ export default function BoardReport({
                     </div>
                 </div>
 
-                {/* Detailed Task Report with Checklists & Lists Breakdown (Professional PDF and Screen View) */}
+                {/* Clean Professional Task Data Table */}
                 <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b border-border/80 pb-1">
+                    <div className="flex items-center justify-between border-b border-border/80 pb-2">
                         <div>
                             <h3 className="flex items-center gap-2 text-base font-bold text-foreground">
                                 <FileText className="h-4 w-4 text-[#0052cc]" />
-                                <span>
-                                    Rincian Seluruh Tugas & Sub-Task Checklist
-                                </span>
+                                <span>Daftar Tugas & Status</span>
                             </h3>
                             <p className="text-xs text-muted-foreground">
-                                Menampilkan daftar kartu berdasarkan kolom list
-                                dan status pengerjaan checklist sub-task.
-                                Lampiran file tersimpan aman di aplikasi.
+                                Ringkasan seluruh tugas, kolom list, penanggung jawab (PIC), dan status pengerjaan.
                             </p>
                         </div>
                         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                            {filteredCards.length} Kartu Aktif
+                            {filteredCards.length} Kartu
                         </span>
                     </div>
 
-                    {/* Grouped by List View (Default & Primary Print View) */}
-                    <div className="space-y-4">
-                        {cardsGroupedByList.map((group) => {
-                            if (group.cards.length === 0) return null;
+                    <div className="print-avoid-break overflow-x-auto rounded-xl border border-border bg-card shadow-xs">
+                        <table className="w-full text-left text-xs">
+                            <thead className="border-b border-border bg-muted/40 font-semibold text-muted-foreground">
+                                <tr>
+                                    <th className="w-10 px-3 py-3 text-center">#</th>
+                                    <th className="px-4 py-3">Tugas / Judul</th>
+                                    <th className="px-3 py-3">Kolom List</th>
+                                    <th className="px-3 py-3">PIC</th>
+                                    <th className="px-3 py-3">Tenggat</th>
+                                    <th className="px-3 py-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/60">
+                                {filteredCards.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                                            Tidak ada tugas ditemukan untuk filter ini.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredCards.map((card, idx) => {
+                                        const isCardOverdue =
+                                            card.due_date &&
+                                            !card.is_completed &&
+                                            new Date(card.due_date) < now;
+                                        const listName =
+                                            board.lists?.find((l) => l.id === card.board_list_id)?.title ||
+                                            '-';
 
-                            return (
-                                <div
-                                    key={group.id}
-                                    className="print-avoid-break overflow-hidden rounded-xl border border-border bg-card shadow-xs"
-                                >
-                                    {/* List Header */}
-                                    <div className="flex items-center justify-between border-b border-border bg-slate-100/80 px-4 py-2.5 dark:bg-slate-900">
-                                        <div className="flex items-center gap-2">
-                                            <span className="h-2 w-2 rounded-full bg-[#0052cc]" />
-                                            <h4 className="text-xs font-bold tracking-wider text-foreground uppercase sm:text-sm">
-                                                {group.title}
-                                            </h4>
-                                            <span className="text-xs text-muted-foreground">
-                                                ({group.cards.length} kartu)
-                                            </span>
-                                        </div>
-                                        <span className="text-[11px] font-medium text-muted-foreground">
-                                            {group.completed} dari {group.total}{' '}
-                                            selesai
-                                        </span>
-                                    </div>
-
-                                    {/* Cards inside List */}
-                                    <div className="divide-y divide-border/60">
-                                        {group.cards.map((card) => {
-                                            const isCardOverdue =
-                                                card.due_date &&
-                                                !card.is_completed &&
-                                                new Date(card.due_date) < now;
-                                            const checklists =
-                                                card.checklists || [];
-
-                                            return (
-                                                <div
-                                                    key={card.id}
-                                                    className="p-3.5 transition-colors hover:bg-muted/20 sm:p-4"
-                                                >
-                                                    <div className="flex flex-col justify-between gap-2.5 sm:flex-row sm:items-start">
-                                                        {/* Card title, description, labels */}
-                                                        <div className="min-w-0 flex-1 space-y-1.5">
-                                                            <div className="flex items-start gap-2">
-                                                                <span
-                                                                    className={`text-xs leading-snug font-semibold sm:text-sm ${
-                                                                        card.is_completed
-                                                                            ? 'text-muted-foreground line-through'
-                                                                            : 'text-foreground'
-                                                                    }`}
-                                                                >
-                                                                    {card.title}
-                                                                </span>
-
-                                                                {card.is_completed && (
-                                                                    <Badge className="shrink-0 border-emerald-500/30 bg-emerald-500/15 text-[10px] text-emerald-700 dark:text-emerald-300">
-                                                                        Selesai
-                                                                    </Badge>
-                                                                )}
-                                                                {isCardOverdue && (
-                                                                    <Badge
-                                                                        variant="destructive"
-                                                                        className="shrink-0 text-[10px]"
-                                                                    >
-                                                                        Overdue
-                                                                    </Badge>
-                                                                )}
-                                                            </div>
-
-                                                            {card.description && (
-                                                                <p className="line-clamp-2 text-xs text-muted-foreground">
-                                                                    {
-                                                                        card.description
-                                                                    }
-                                                                </p>
-                                                            )}
-
-                                                            {/* Labels */}
-                                                            {card.labels &&
-                                                                card.labels
-                                                                    .length >
-                                                                    0 && (
-                                                                    <div className="flex flex-wrap gap-1 pt-0.5">
-                                                                        {card.labels.map(
-                                                                            (
-                                                                                lbl: any,
-                                                                            ) => (
-                                                                                <span
-                                                                                    key={
-                                                                                        lbl.id
-                                                                                    }
-                                                                                    className="rounded px-1.5 py-0.5 text-[9px] font-semibold text-white"
-                                                                                    style={{
-                                                                                        backgroundColor:
-                                                                                            lbl.color,
-                                                                                    }}
-                                                                                >
-                                                                                    {
-                                                                                        lbl.name
-                                                                                    }
-                                                                                </span>
-                                                                            ),
-                                                                        )}
-                                                                    </div>
-                                                                )}
-
-                                                            {/* Checklists Detailed Items (Checked / Pending) */}
-                                                            {checklists.length >
-                                                                0 && (
-                                                                <div className="pt-2">
-                                                                    <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                                                                        <CheckSquare className="h-3 w-3 text-[#0052cc]" />
-                                                                        <span>
-                                                                            Sub-task
-                                                                            Checklist
-                                                                            (
-                                                                            {
-                                                                                checklists.filter(
-                                                                                    (
-                                                                                        i,
-                                                                                    ) =>
-                                                                                        i.is_completed,
-                                                                                )
-                                                                                    .length
-                                                                            }
-                                                                            /
-                                                                            {
-                                                                                checklists.length
-                                                                            }
-                                                                            ):
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="grid grid-cols-1 gap-1.5 pl-1 sm:grid-cols-2">
-                                                                        {checklists.map(
-                                                                            (
-                                                                                item,
-                                                                            ) => (
-                                                                                <div
-                                                                                    key={
-                                                                                        item.id
-                                                                                    }
-                                                                                    className={`flex items-center gap-1.5 text-[11px] ${
-                                                                                        item.is_completed
-                                                                                            ? 'text-emerald-700 line-through dark:text-emerald-400'
-                                                                                            : 'text-slate-600 dark:text-slate-400'
-                                                                                    }`}
-                                                                                >
-                                                                                    {item.is_completed ? (
-                                                                                        <Check className="h-3 w-3 shrink-0 font-bold text-emerald-600" />
-                                                                                    ) : (
-                                                                                        <Circle className="h-2.5 w-2.5 shrink-0 text-slate-400" />
-                                                                                    )}
-                                                                                    <span className="truncate">
-                                                                                        {
-                                                                                            item.title
-                                                                                        }
-                                                                                    </span>
-                                                                                </div>
-                                                                            ),
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Card Metadata (Assignees, Due date, Attachments notice) */}
-                                                        <div className="flex shrink-0 items-end justify-between gap-2 text-right sm:min-w-[140px] sm:flex-col sm:justify-start">
-                                                            {/* Assignees */}
-                                                            {card.members &&
-                                                            card.members
-                                                                .length > 0 ? (
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <span className="hidden text-[10px] text-muted-foreground sm:inline">
-                                                                        PIC:
-                                                                    </span>
-                                                                    <div className="flex items-center -space-x-1.5">
-                                                                        {card.members.map(
-                                                                            (
-                                                                                m: any,
-                                                                            ) => (
-                                                                                <Avatar
-                                                                                    key={
-                                                                                        m.id
-                                                                                    }
-                                                                                    className="h-6 w-6 border-2 border-background"
-                                                                                    title={
-                                                                                        m.name
-                                                                                    }
-                                                                                >
-                                                                                    <AvatarImage
-                                                                                        src={
-                                                                                            m.avatar
-                                                                                                ? `/storage/${m.avatar}`
-                                                                                                : undefined
-                                                                                        }
-                                                                                        alt={
-                                                                                            m.name
-                                                                                        }
-                                                                                    />
-                                                                                    <AvatarFallback className="text-[9px]">
-                                                                                        {m.name
-                                                                                            .split(
-                                                                                                ' ',
-                                                                                            )
-                                                                                            .map(
-                                                                                                (
-                                                                                                    n: string,
-                                                                                                ) =>
-                                                                                                    n[0],
-                                                                                            )
-                                                                                            .join(
-                                                                                                '',
-                                                                                            )
-                                                                                            .toUpperCase()}
-                                                                                    </AvatarFallback>
-                                                                                </Avatar>
-                                                                            ),
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-[10px] text-muted-foreground/60">
-                                                                    - Belum ada
-                                                                    PIC -
-                                                                </span>
-                                                            )}
-
-                                                            {/* Due Date */}
-                                                            {card.due_date && (
-                                                                <div
-                                                                    className={`flex items-center gap-1 text-[11px] font-medium ${
-                                                                        card.is_completed
-                                                                            ? 'text-muted-foreground'
-                                                                            : isCardOverdue
-                                                                              ? 'font-semibold text-rose-600'
-                                                                              : 'text-foreground'
-                                                                    }`}
-                                                                >
-                                                                    <Calendar className="h-3 w-3" />
-                                                                    <span>
-                                                                        {format(
-                                                                            new Date(
-                                                                                card.due_date,
-                                                                            ),
-                                                                            'dd MMM yyyy',
-                                                                        )}
-                                                                    </span>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Attachment note (Document in app only) */}
+                                        return (
+                                            <tr
+                                                key={card.id}
+                                                className="transition-colors hover:bg-muted/20"
+                                            >
+                                                <td className="px-3 py-2.5 text-center font-medium text-muted-foreground">
+                                                    {idx + 1}
+                                                </td>
+                                                <td className="px-4 py-2.5">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span
+                                                                className={`font-semibold ${
+                                                                    card.is_completed
+                                                                        ? 'text-muted-foreground line-through'
+                                                                        : 'text-foreground'
+                                                                }`}
+                                                            >
+                                                                {card.title}
+                                                            </span>
                                                             {card.attachments &&
-                                                                card.attachments
-                                                                    .length >
-                                                                    0 && (
-                                                                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                                                card.attachments.length > 0 && (
+                                                                    <span
+                                                                        className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground"
+                                                                        title={`${card.attachments.length} lampiran tersimpan di aplikasi`}
+                                                                    >
                                                                         <Paperclip className="h-3 w-3" />
-                                                                        <span>
-                                                                            {
-                                                                                card
-                                                                                    .attachments
-                                                                                    .length
-                                                                            }{' '}
-                                                                            file
-                                                                            di
-                                                                            app
-                                                                        </span>
+                                                                        {card.attachments.length}
                                                                     </span>
                                                                 )}
                                                         </div>
+                                                        {card.description && (
+                                                            <p className="line-clamp-1 text-[11px] text-muted-foreground">
+                                                                {card.description}
+                                                            </p>
+                                                        )}
+                                                        {card.labels && card.labels.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 pt-0.5">
+                                                                {card.labels.map((lbl: any) => (
+                                                                    <span
+                                                                        key={lbl.id}
+                                                                        className="rounded px-1.5 py-0.5 text-[9px] font-semibold text-white"
+                                                                        style={{
+                                                                            backgroundColor: lbl.color,
+                                                                        }}
+                                                                    >
+                                                                        {lbl.name}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                                </td>
+                                                <td className="px-3 py-2.5">
+                                                    <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+                                                        {listName}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2.5">
+                                                    {card.members && card.members.length > 0 ? (
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className="flex items-center -space-x-1.5">
+                                                                {card.members.map((m: any) => (
+                                                                    <Avatar
+                                                                        key={m.id}
+                                                                        className="h-6 w-6 border-2 border-background"
+                                                                        title={m.name}
+                                                                    >
+                                                                        <AvatarImage
+                                                                            src={
+                                                                                m.avatar
+                                                                                    ? `/storage/${m.avatar}`
+                                                                                    : undefined
+                                                                            }
+                                                                            alt={m.name}
+                                                                        />
+                                                                        <AvatarFallback className="text-[9px]">
+                                                                            {m.name
+                                                                                .split(' ')
+                                                                                .map((n: string) => n[0])
+                                                                                .join('')
+                                                                                .toUpperCase()}
+                                                                        </AvatarFallback>
+                                                                    </Avatar>
+                                                                ))}
+                                                            </div>
+                                                            <span className="hidden max-w-[120px] truncate text-[11px] text-muted-foreground xl:inline">
+                                                                {card.members
+                                                                    .map((m: any) => m.name)
+                                                                    .join(', ')}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[11px] text-muted-foreground/60">
+                                                            -
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2.5 whitespace-nowrap">
+                                                    {card.due_date ? (
+                                                        <span
+                                                            className={`text-[11px] ${
+                                                                card.is_completed
+                                                                    ? 'text-muted-foreground'
+                                                                    : isCardOverdue
+                                                                      ? 'font-semibold text-rose-600'
+                                                                      : 'text-foreground'
+                                                            }`}
+                                                        >
+                                                            {format(
+                                                                new Date(card.due_date),
+                                                                'dd MMM yyyy',
+                                                            )}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[11px] text-muted-foreground/60">
+                                                            -
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                                                    {card.is_completed ? (
+                                                        <Badge className="border-emerald-500/30 bg-emerald-500/15 text-[10px] text-emerald-700 dark:text-emerald-300">
+                                                            Selesai
+                                                        </Badge>
+                                                    ) : isCardOverdue ? (
+                                                        <Badge
+                                                            variant="destructive"
+                                                            className="text-[10px]"
+                                                        >
+                                                            Overdue
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="border-blue-300 bg-blue-50 text-[10px] text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300"
+                                                        >
+                                                            Berjalan
+                                                        </Badge>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                {/* Professional Report Footer (Both on Screen and PDF Export) */}
-                <div className="mt-8 border-t border-slate-200 pt-8 pb-4 text-xs text-slate-500 dark:border-slate-800">
-                    <div className="flex flex-col items-center justify-between gap-6 sm:flex-row sm:items-end">
-                        <div className="space-y-1 text-center sm:text-left">
-                            <div className="flex items-center justify-center gap-2 text-sm font-bold text-slate-800 sm:justify-start dark:text-slate-200">
-                                <BrandLogo
-                                    variant="icon"
-                                    className="size-4 shrink-0"
-                                />
-                                <span>Powered by Firlabs Board</span>
-                            </div>
-                            <p className="text-[11px] text-slate-400">
-                                Dokumen laporan resmi ini dibuat dan
-                                disinkronkan secara otomatis oleh{' '}
-                                <strong className="text-slate-700 dark:text-slate-300">
-                                    Firlabs Board System
-                                </strong>
-                                .
-                            </p>
-                            <p className="text-[10px] text-slate-400">
-                                ID Board: #{board.id} • Tanggal Ekspor:{' '}
-                                {currentDateFormatted} •{' '}
-                                {getPeriodFormattedRange(period)}
-                            </p>
+                {/* Centered Watermark Footer Branding */}
+                <div className="mt-12 border-t border-slate-200 pt-8 pb-6 text-center text-xs text-slate-500 dark:border-slate-800">
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                        <div className="flex items-center justify-center opacity-85 transition-opacity hover:opacity-100">
+                            <BrandLogo variant="horizontal" className="h-7 w-auto" />
                         </div>
+                        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            Powered by Firlabs Board
+                        </p>
+                        <p className="max-w-md text-[11px] text-slate-400">
+                            Laporan resmi otomatis • Board #{board.id} • Ekspor: {currentDateFormatted} • {getPeriodFormattedRange(period)}
+                        </p>
+                    </div>
 
-                        {/* Print Signoff area */}
-                        <div className="print-only w-52 shrink-0 text-center">
-                            <div className="mb-2 border-b border-slate-400 pb-14"></div>
+                    {/* Print Signoff area */}
+                    <div className="print-only mt-8 flex justify-end">
+                        <div className="w-52 text-center">
+                            <div className="mb-2 border-b border-slate-400 pb-12"></div>
                             <p className="font-bold text-slate-900">
                                 {board.owner?.name || 'Board Administrator'}
                             </p>

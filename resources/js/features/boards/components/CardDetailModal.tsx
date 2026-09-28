@@ -87,6 +87,7 @@ interface CardDetailModalProps {
     pendingChecklists?: string[];
     onAddPendingChecklist?: (title: string) => void;
     onRemovePendingChecklist?: (index: number) => void;
+    onEditPendingChecklist?: (index: number, newTitle: string) => void;
     fileInputRef: React.RefObject<HTMLInputElement>;
 }
 
@@ -115,6 +116,7 @@ export function CardDetailModal({
     pendingChecklists = [],
     onAddPendingChecklist,
     onRemovePendingChecklist,
+    onEditPendingChecklist,
     fileInputRef,
 }: CardDetailModalProps) {
     const { auth } = usePage<SharedData>().props;
@@ -635,6 +637,9 @@ export function CardDetailModal({
                                     onRemovePendingChecklist={
                                         onRemovePendingChecklist
                                     }
+                                    onEditPendingChecklist={
+                                        onEditPendingChecklist
+                                    }
                                 />
                             )}
 
@@ -1124,13 +1129,17 @@ function PendingChecklistSection({
     pendingChecklists,
     onAddPendingChecklist,
     onRemovePendingChecklist,
+    onEditPendingChecklist,
 }: {
     pendingChecklists: string[];
     onAddPendingChecklist?: (title: string) => void;
     onRemovePendingChecklist?: (index: number) => void;
+    onEditPendingChecklist?: (index: number, newTitle: string) => void;
 }) {
     const [newChecklistItem, setNewChecklistItem] = useState('');
     const [isAdding, setIsAdding] = useState(false);
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    const [editingText, setEditingText] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
 
     const handleAdd = () => {
@@ -1145,6 +1154,21 @@ function PendingChecklistSection({
         setTimeout(() => {
             inputRef.current?.focus();
         }, 50);
+    };
+
+    const handleStartEdit = (index: number, text: string) => {
+        setEditingIndex(index);
+        setEditingText(text);
+    };
+
+    const handleSaveEdit = (index: number) => {
+        if (!editingText.trim()) {
+            toast.error('Checklist tidak boleh kosong');
+            return;
+        }
+        onEditPendingChecklist?.(index, editingText.trim());
+        setEditingIndex(null);
+        setEditingText('');
     };
 
     return (
@@ -1172,19 +1196,79 @@ function PendingChecklistSection({
                         className="group flex items-center gap-3 rounded-md border border-dashed border-border/80 bg-muted/20 p-2.5 transition-colors hover:bg-muted/40"
                     >
                         <CheckSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        <span className="flex-1 text-sm font-medium">
-                            {item}
-                        </span>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onRemovePendingChecklist?.(index)}
-                            className="h-7 w-7 p-0 text-destructive opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
-                            title="Hapus checklist"
-                        >
-                            <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {editingIndex === index ? (
+                            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                                <Input
+                                    value={editingText}
+                                    onChange={(e) =>
+                                        setEditingText(e.target.value)
+                                    }
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter')
+                                            handleSaveEdit(index);
+                                        if (e.key === 'Escape')
+                                            setEditingIndex(null);
+                                    }}
+                                    autoFocus
+                                    className="h-7 bg-background text-xs"
+                                />
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => handleSaveEdit(index)}
+                                    className="h-7 px-2 text-xs"
+                                >
+                                    <Check className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setEditingIndex(null)}
+                                    className="h-7 px-2 text-xs"
+                                >
+                                    <X className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        ) : (
+                            <>
+                                <span
+                                    onDoubleClick={() =>
+                                        handleStartEdit(index, item)
+                                    }
+                                    className="flex-1 cursor-pointer text-sm font-medium transition-colors select-none hover:text-primary"
+                                    title="Klik 2x atau tombol edit untuk mengubah teks"
+                                >
+                                    {item}
+                                </span>
+                                <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() =>
+                                            handleStartEdit(index, item)
+                                        }
+                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                        title="Edit teks"
+                                    >
+                                        <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() =>
+                                            onRemovePendingChecklist?.(index)
+                                        }
+                                        className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                        title="Hapus checklist"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 ))}
 

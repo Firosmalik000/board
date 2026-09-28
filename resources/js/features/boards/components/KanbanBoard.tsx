@@ -189,6 +189,7 @@ export function KanbanBoard({
                                                 >
                                                     <KanbanList
                                                         list={list}
+                                                        allLists={board.lists || []}
                                                         onAddCard={
                                                             handleAddCard
                                                         }

@@ -25,8 +25,8 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
 import {
-    CheckCircle2,
     Clock,
+    FileText,
     Globe,
     Layers,
     Lock,
@@ -37,6 +37,17 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+
+const COLOR_PRESETS = [
+    '#0079bf', // Blue
+    '#519839', // Green
+    '#d29034', // Orange
+    '#b04632', // Red
+    '#89609e', // Purple
+    '#00aecc', // Cyan
+    '#172b4d', // Indigo
+    '#344563', // Charcoal
+];
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -272,7 +283,22 @@ export default function BoardsIndex({ boards: initialBoards }: BoardsProps) {
                                         <Label htmlFor="color">
                                             Board Color
                                         </Label>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex flex-wrap gap-2 pt-1">
+                                            {COLOR_PRESETS.map((preset) => (
+                                                <button
+                                                    key={preset}
+                                                    type="button"
+                                                    className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-110 ${
+                                                        data.background_color === preset
+                                                            ? 'border-foreground ring-2 ring-primary ring-offset-2'
+                                                            : 'border-transparent'
+                                                    }`}
+                                                    style={{ backgroundColor: preset }}
+                                                    onClick={() => setData('background_color', preset)}
+                                                />
+                                            ))}
+                                        </div>
+                                        <div className="flex items-center gap-2 pt-1">
                                             <Input
                                                 id="color"
                                                 type="color"
@@ -283,15 +309,11 @@ export default function BoardsIndex({ boards: initialBoards }: BoardsProps) {
                                                         e.target.value,
                                                     )
                                                 }
-                                                className="h-10 w-20 cursor-pointer"
+                                                className="h-8 w-14 cursor-pointer p-0.5"
                                             />
-                                            <div
-                                                className="h-10 flex-1 rounded-md border"
-                                                style={{
-                                                    backgroundColor:
-                                                        data.background_color,
-                                                }}
-                                            />
+                                            <span className="text-xs text-muted-foreground font-mono">
+                                                {data.background_color}
+                                            </span>
                                         </div>
                                     </div>
                                     <Button
@@ -404,184 +426,162 @@ export default function BoardsIndex({ boards: initialBoards }: BoardsProps) {
                             return (
                                 <motion.div
                                     key={board.id}
-                                    initial={{ opacity: 0, y: 20 }}
+                                    initial={{ opacity: 0, y: 15 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.05 }}
+                                    transition={{ delay: index * 0.04 }}
                                 >
                                     <Card
-                                        className="group cursor-pointer overflow-hidden border-0 bg-card ring-1 ring-border/50 transition-all hover:scale-[1.02] hover:shadow-xl hover:ring-2 hover:ring-primary/50 dark:bg-card dark:ring-border dark:hover:ring-primary/40"
+                                        className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg dark:hover:border-primary/50 cursor-pointer"
                                         onClick={() =>
                                             router.visit(`/boards/${board.id}`)
                                         }
                                     >
-                                        {/* Color Bar */}
-                                        <div
-                                            className="h-2 w-full"
-                                            style={{
-                                                backgroundColor:
-                                                    board.background_color,
-                                            }}
-                                        />
+                                        <div>
+                                            {/* Colored Top Accent Bar */}
+                                            <div
+                                                className="h-2.5 w-full opacity-90 transition-opacity group-hover:opacity-100"
+                                                style={{
+                                                    backgroundColor:
+                                                        board.background_color || '#0079bf',
+                                                }}
+                                            />
 
-                                        <CardHeader className="pb-3">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <CardTitle className="line-clamp-2 text-base transition-colors group-hover:text-primary">
-                                                    {board.title}
-                                                </CardTitle>
-                                                <Badge
-                                                    variant="secondary"
-                                                    className={`shrink-0 gap-1 border ${visibilityConfig.color}`}
-                                                >
-                                                    {visibilityConfig.icon}
-                                                    <span className="text-xs font-medium">
-                                                        {visibilityConfig.label}
-                                                    </span>
-                                                </Badge>
-                                            </div>
-                                            {board.description && (
-                                                <CardDescription className="line-clamp-2 text-xs">
-                                                    {board.description}
-                                                </CardDescription>
-                                            )}
-                                        </CardHeader>
-
-                                        <CardContent className="space-y-3">
-                                            {/* Progress Bar */}
-                                            {stats.totalCards > 0 && (
-                                                <div className="space-y-1.5">
-                                                    <div className="flex items-center justify-between text-xs">
-                                                        <span className="font-medium text-muted-foreground">
-                                                            Progress
+                                            <CardHeader className="p-4 pb-2">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <CardTitle className="line-clamp-1 text-base font-bold text-foreground transition-colors group-hover:text-primary">
+                                                        {board.title}
+                                                    </CardTitle>
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className={`shrink-0 gap-1 border px-2 py-0.5 text-[11px] ${visibilityConfig.color}`}
+                                                    >
+                                                        {visibilityConfig.icon}
+                                                        <span>
+                                                            {visibilityConfig.label}
                                                         </span>
-                                                        <span className="font-semibold text-primary">
-                                                            {
-                                                                stats.completionPercentage
-                                                            }
-                                                            %
+                                                    </Badge>
+                                                </div>
+                                                {board.description && (
+                                                    <CardDescription className="line-clamp-2 mt-1 text-xs text-muted-foreground">
+                                                        {board.description}
+                                                    </CardDescription>
+                                                )}
+                                            </CardHeader>
+
+                                            <CardContent className="space-y-3 p-4 pt-1">
+                                                {/* Progress Bar */}
+                                                {stats.totalCards > 0 && (
+                                                    <div className="space-y-1.5 pt-1">
+                                                        <div className="flex items-center justify-between text-xs">
+                                                            <span className="text-[11px] font-medium text-muted-foreground">
+                                                                Penyelesaian
+                                                            </span>
+                                                            <span className="font-semibold text-foreground">
+                                                                {stats.completionPercentage}%
+                                                            </span>
+                                                        </div>
+                                                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                                                            <div
+                                                                className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                                                                style={{
+                                                                    width: `${stats.completionPercentage}%`,
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Stats Grid */}
+                                                <div className="grid grid-cols-3 gap-1.5 rounded-lg border border-border/50 bg-muted/40 p-2 text-center dark:bg-muted/20">
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-xs font-bold text-foreground">
+                                                            {stats.totalLists}
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            Kolom
                                                         </span>
                                                     </div>
-                                                    <div className="h-2 w-full overflow-hidden rounded-full bg-secondary dark:bg-secondary/50">
-                                                        <div
-                                                            className="h-full bg-gradient-to-r from-primary via-primary to-primary/80 transition-all duration-500 dark:from-primary dark:via-primary dark:to-primary/90"
-                                                            style={{
-                                                                width: `${stats.completionPercentage}%`,
-                                                            }}
-                                                        />
+                                                    <div className="flex flex-col items-center border-x border-border/50">
+                                                        <span className="text-xs font-bold text-foreground">
+                                                            {stats.completedCards}/{stats.totalCards}
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            Tugas
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-xs font-bold text-foreground">
+                                                            {stats.totalMembers}
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            Anggota
+                                                        </span>
                                                     </div>
                                                 </div>
-                                            )}
 
-                                            {/* Stats Grid */}
-                                            <div className="grid grid-cols-3 gap-2 border-t border-border pt-2">
-                                                <div className="flex flex-col items-center gap-1 rounded-md border border-border/50 bg-muted/50 p-2 dark:bg-muted/30">
-                                                    <Layers className="h-4 w-4 text-muted-foreground" />
-                                                    <span className="text-xs font-semibold text-foreground">
-                                                        {stats.totalLists}
-                                                    </span>
-                                                    <span className="text-[10px] text-muted-foreground">
-                                                        Lists
-                                                    </span>
-                                                </div>
-                                                <div className="flex flex-col items-center gap-1 rounded-md border border-border/50 bg-muted/50 p-2 dark:bg-muted/30">
-                                                    <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-                                                    <span className="text-xs font-semibold text-foreground">
-                                                        {stats.completedCards}/
-                                                        {stats.totalCards}
-                                                    </span>
-                                                    <span className="text-[10px] text-muted-foreground">
-                                                        Cards
-                                                    </span>
-                                                </div>
-                                                <div className="flex flex-col items-center gap-1 rounded-md border border-border/50 bg-muted/50 p-2 dark:bg-muted/30">
-                                                    <Users className="h-4 w-4 text-muted-foreground" />
-                                                    <span className="text-xs font-semibold text-foreground">
-                                                        {stats.totalMembers}
-                                                    </span>
-                                                    <span className="text-[10px] text-muted-foreground">
-                                                        Members
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Members Avatars */}
-                                            {board.members &&
-                                                board.members.length > 0 && (
-                                                    <div className="flex items-center gap-2 pt-2">
-                                                        <div className="flex -space-x-2">
-                                                            {board.members
-                                                                .slice(0, 4)
-                                                                .map(
-                                                                    (
-                                                                        member,
-                                                                    ) => (
-                                                                        <Avatar
-                                                                            key={
-                                                                                member.id
-                                                                            }
-                                                                            className="h-7 w-7 border-2 border-background ring-1 ring-border"
-                                                                        >
-                                                                            <AvatarImage
-                                                                                src={
-                                                                                    member.avatar
-                                                                                        ? `/storage/${member.avatar}`
-                                                                                        : undefined
-                                                                                }
-                                                                                alt={
-                                                                                    member.name
-                                                                                }
-                                                                            />
-                                                                            <AvatarFallback className="text-[10px] font-semibold">
-                                                                                {member.name
-                                                                                    .split(
-                                                                                        ' ',
-                                                                                    )
-                                                                                    .map(
-                                                                                        (
-                                                                                            n,
-                                                                                        ) =>
-                                                                                            n[0],
-                                                                                    )
-                                                                                    .join(
-                                                                                        '',
-                                                                                    )
-                                                                                    .toUpperCase()}
-                                                                            </AvatarFallback>
-                                                                        </Avatar>
-                                                                    ),
-                                                                )}
-                                                            {board.members
-                                                                .length > 4 && (
-                                                                <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-muted text-[10px] font-semibold ring-1 ring-border">
-                                                                    +
-                                                                    {board
-                                                                        .members
-                                                                        .length -
-                                                                        4}
+                                                {/* Members Avatars */}
+                                                {board.members && board.members.length > 0 && (
+                                                    <div className="flex items-center gap-2 pt-1">
+                                                        <div className="flex -space-x-1.5">
+                                                            {board.members.slice(0, 4).map((member) => (
+                                                                <Avatar
+                                                                    key={member.id}
+                                                                    className="h-6 w-6 border-2 border-background ring-1 ring-border/50"
+                                                                >
+                                                                    <AvatarImage
+                                                                        src={
+                                                                            member.avatar
+                                                                                ? `/storage/${member.avatar}`
+                                                                                : undefined
+                                                                        }
+                                                                        alt={member.name}
+                                                                    />
+                                                                    <AvatarFallback className="text-[9px] font-semibold">
+                                                                        {member.name
+                                                                            .split(' ')
+                                                                            .map((n) => n[0])
+                                                                            .join('')
+                                                                            .toUpperCase()}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                            ))}
+                                                            {board.members.length > 4 && (
+                                                                <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-muted text-[9px] font-semibold ring-1 ring-border/50">
+                                                                    +{board.members.length - 4}
                                                                 </div>
                                                             )}
                                                         </div>
                                                     </div>
                                                 )}
+                                            </CardContent>
+                                        </div>
 
-                                            {/* Last Updated */}
-                                            {board.updated_at && (
-                                                <div className="flex items-center gap-1.5 pt-1 text-[11px] text-muted-foreground">
-                                                    <Clock className="h-3 w-3" />
-                                                    <span>
-                                                        Updated{' '}
-                                                        {formatDistanceToNow(
-                                                            new Date(
-                                                                board.updated_at,
-                                                            ),
-                                                            { addSuffix: true },
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </CardContent>
-
-                                        {/* Hover Border Effect */}
-                                        <div className="pointer-events-none absolute inset-0 rounded-lg border-2 border-transparent transition-colors group-hover:border-primary/20 dark:group-hover:border-primary/30" />
+                                        {/* Card Footer with Quick Report Link and Last Updated */}
+                                        <div className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-4 py-2 text-[11px] text-muted-foreground">
+                                            <div className="flex items-center gap-1">
+                                                <Clock className="h-3 w-3" />
+                                                <span>
+                                                    {board.updated_at
+                                                        ? formatDistanceToNow(
+                                                              new Date(board.updated_at),
+                                                              { addSuffix: true },
+                                                          )
+                                                        : 'Baru saja'}
+                                                </span>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 gap-1 px-2 text-[11px] font-medium text-primary hover:bg-primary/10"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    router.visit(`/boards/${board.id}/report`);
+                                                }}
+                                            >
+                                                <FileText className="h-3 w-3" />
+                                                Laporan
+                                            </Button>
+                                        </div>
                                     </Card>
                                 </motion.div>
                             );

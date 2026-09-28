@@ -1,26 +1,44 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
-import { Card as CardType } from '@/lib/store';
+import { Card as CardType, List as ListType } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { Draggable } from '@hello-pangea/dnd';
+import { router } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import {
+    ArrowRightLeft,
     CheckCircle2,
     CheckSquare,
     Clock,
+    ExternalLink,
     MessageSquare,
+    MoreHorizontal,
     Paperclip,
+    Trash2,
 } from 'lucide-react';
 import React from 'react';
+import { toast } from 'sonner';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface KanbanCardProps {
     card: CardType;
     index: number;
+    currentListId?: number;
+    allLists?: ListType[];
     onClick: () => void;
 }
 
 export const KanbanCard = React.memo(
-    ({ card, index, onClick }: KanbanCardProps) => {
+    ({ card, index, currentListId, allLists = [], onClick }: KanbanCardProps) => {
         const hasMembers = card.members && card.members.length > 0;
         const commentCount = card.comments?.length || 0;
         const attachmentCount = card.attachments?.length || 0;
@@ -40,6 +58,69 @@ export const KanbanCard = React.memo(
             !isOverdue &&
             new Date(card.due_date!).getTime() - now.getTime() <
                 24 * 60 * 60 * 1000;
+
+        // Other lists available to move card to
+        const otherLists = (allLists || []).filter(
+            (l) => l.id !== currentListId && l.id !== card.list_id,
+        );
+
+        const handleMoveToList = (e: React.MouseEvent, targetListId: number) => {
+            e.stopPropagation();
+            router.patch(
+                `/cards/${card.id}/move`,
+                {
+                    list_id: targetListId,
+                    position: 9999,
+                },
+                {
+                    preserveScroll: true,
+                    preserveState: true,
+                    onSuccess: () => {
+                        const target = allLists.find((l) => l.id === targetListId);
+                        toast.success(`Kartu dipindahkan ke ${target?.title || 'list lain'}`);
+                    },
+                    onError: () => toast.error('Gagal memindahkan kartu'),
+                },
+            );
+        };
+
+        const handleToggleComplete = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            router.patch(
+                `/cards/${card.id}`,
+                {
+                    is_completed: !card.is_completed,
+                },
+                {
+                    preserveScroll: true,
+                    preserveState: true,
+                    onSuccess: () => {
+                        toast.success(
+                            !card.is_completed
+                                ? '✓ Kartu ditandai selesai!'
+                                : 'Kartu ditandai belum selesai',
+                        );
+                    },
+                    onError: () => toast.error('Gagal memperbarui status kartu'),
+                },
+            );
+        };
+
+        const handleDeleteCard = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            if (
+                !confirm(
+                    `Hapus kartu "${card.title}"? Tindakan ini tidak dapat dibatalkan.`,
+                )
+            ) {
+                return;
+            }
+            router.delete(`/cards/${card.id}`, {
+                preserveScroll: true,
+                onSuccess: () => toast.success('Kartu berhasil dihapus'),
+                onError: () => toast.error('Gagal menghapus kartu'),
+            });
+        };
 
         return (
             <Draggable draggableId={card.id.toString()} index={index}>
@@ -101,8 +182,8 @@ export const KanbanCard = React.memo(
                                     </div>
                                 )}
 
-                                {/* Card Title */}
-                                <div className="flex items-start gap-1.5">
+                                {/* Card Title & 3-Dots Quick Action Menu */}
+                                <div className="flex items-start justify-between gap-1.5">
                                     <h4
                                         className={cn(
                                             'flex-1 text-xs leading-snug font-normal text-slate-900 transition-colors group-hover:text-blue-600 sm:text-sm dark:text-slate-100 dark:group-hover:text-blue-400',
@@ -112,9 +193,79 @@ export const KanbanCard = React.memo(
                                     >
                                         {card.title}
                                     </h4>
-                                    {card.is_completed && (
-                                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                                    )}
+                                    <div className="flex items-center shrink-0 gap-0.5">
+                                        {card.is_completed && (
+                                            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500 mr-0.5" />
+                                        )}
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="p-1 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity hover:bg-slate-100 text-slate-400 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                                                    title="Menu opsi kartu"
+                                                >
+                                                    <MoreHorizontal className="h-3.5 w-3.5" />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent
+                                                align="end"
+                                                className="w-48 shadow-lg border bg-popover z-50"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {otherLists.length > 0 && (
+                                                    <DropdownMenuSub>
+                                                        <DropdownMenuSubTrigger className="text-xs py-1.5 cursor-pointer">
+                                                            <ArrowRightLeft className="mr-2 h-3.5 w-3.5 text-blue-500" />
+                                                            <span>Pindah ke List...</span>
+                                                        </DropdownMenuSubTrigger>
+                                                        <DropdownMenuSubContent className="w-44 z-50">
+                                                            {otherLists.map((targetList) => (
+                                                                <DropdownMenuItem
+                                                                    key={targetList.id}
+                                                                    className="text-xs py-1.5 cursor-pointer"
+                                                                    onClick={(e) =>
+                                                                        handleMoveToList(e, targetList.id)
+                                                                    }
+                                                                >
+                                                                    {targetList.title}
+                                                                </DropdownMenuItem>
+                                                            ))}
+                                                        </DropdownMenuSubContent>
+                                                    </DropdownMenuSub>
+                                                )}
+                                                <DropdownMenuItem
+                                                    className="text-xs py-1.5 cursor-pointer"
+                                                    onClick={handleToggleComplete}
+                                                >
+                                                    <CheckCircle2 className="mr-2 h-3.5 w-3.5 text-emerald-500" />
+                                                    <span>
+                                                        {card.is_completed
+                                                            ? 'Tandai Belum Selesai'
+                                                            : 'Tandai Selesai'}
+                                                    </span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    className="text-xs py-1.5 cursor-pointer"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onClick();
+                                                    }}
+                                                >
+                                                    <ExternalLink className="mr-2 h-3.5 w-3.5 text-slate-500" />
+                                                    <span>Buka Detail Kartu</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    className="text-xs py-1.5 text-destructive focus:text-destructive cursor-pointer"
+                                                    onClick={handleDeleteCard}
+                                                >
+                                                    <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                                    <span>Hapus Kartu</span>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
                                 </div>
 
                                 {/* Card Badges & Metadata (Trello style) */}
