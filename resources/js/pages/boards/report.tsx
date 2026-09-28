@@ -26,6 +26,7 @@ import {
     startOfMonth,
     startOfWeek,
 } from 'date-fns';
+import { id } from 'date-fns/locale';
 import {
     AlertTriangle,
     ArrowLeft,
@@ -87,6 +88,8 @@ export default function BoardReport({
     const [selectedMember, setSelectedMember] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<'grouped' | 'table'>('grouped');
+
+    const currentDateFormatted = format(new Date(), 'dd MMMM yyyy', { locale: id });
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
