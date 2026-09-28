@@ -4,6 +4,7 @@ interface User {
   id: number
   name: string
   email: string
+  avatar?: string
 }
 
 interface Board {
@@ -14,6 +15,7 @@ interface Board {
   background_color: string
   background_image?: string
   owner_id: number
+  owner?: User
   lists?: List[]
   members?: User[]
   labels?: Label[]
@@ -30,6 +32,14 @@ interface List {
   cards?: Card[]
 }
 
+interface ChecklistItem {
+  id: number
+  card_id?: number
+  title: string
+  is_completed: boolean
+  position?: number
+}
+
 interface Card {
   id: number
   list_id: number
@@ -43,6 +53,10 @@ interface Card {
   members?: User[]
   creator?: User
   comments?: any[]
+  checklists?: ChecklistItem[]
+  attachments?: any[]
+  created_at?: string
+  updated_at?: string
 }
 
 interface Label {

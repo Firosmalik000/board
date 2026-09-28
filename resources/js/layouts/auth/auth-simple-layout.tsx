@@ -1,7 +1,8 @@
-import { AppLogoIcon } from '@/components/shared/common';
+import { BrandLogo } from '@/components/shared/common';
 import { home } from '@/routes';
 import { Link } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
+import { ShieldCheck } from 'lucide-react';
 
 interface AuthLayoutProps {
     name?: string;
@@ -15,78 +16,59 @@ export default function AuthSimpleLayout({
     description,
 }: PropsWithChildren<AuthLayoutProps>) {
     return (
-        <div className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 p-6 md:p-10">
-            {/* Animated background elements */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 dark:bg-purple-900 rounded-full mix-blend-multiply dark:mix-blend-normal filter blur-xl opacity-30 animate-blob"></div>
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-300 dark:bg-indigo-900 rounded-full mix-blend-multiply dark:mix-blend-normal filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-300 dark:bg-pink-900 rounded-full mix-blend-multiply dark:mix-blend-normal filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
-            </div>
+        <div className="relative flex min-h-svh flex-col items-center justify-center bg-slate-50/70 dark:bg-slate-950 p-4 sm:p-6 md:p-10 selection:bg-[#0052cc] selection:text-white">
+            {/* Subtle background pattern */}
+            <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px] opacity-40 pointer-events-none" />
 
-            <div className="relative w-full max-w-md z-10">
-                <div className="backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-800/50 p-8 md:p-10">
-                    <div className="flex flex-col gap-8">
-                        <div className="flex flex-col items-center gap-4">
+            <div className="relative w-full max-w-[420px] z-10 space-y-6">
+                {/* Clean elevated authentication card (Atlassian SaaS style) */}
+                <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-xl shadow-slate-200/40 dark:shadow-none p-7 sm:p-9 backdrop-blur-xs">
+                    <div className="flex flex-col gap-6">
+                        {/* Brand Header */}
+                        <div className="flex flex-col items-center gap-3 text-center">
                             <Link
                                 href={home()}
-                                className="flex flex-col items-center gap-2 font-medium group"
+                                className="flex items-center justify-center group transition-transform hover:scale-105"
                             >
-                                <div className="mb-1 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
-                                    <AppLogoIcon className="size-8 fill-current text-white" />
-                                </div>
-                                <span className="sr-only">{title}</span>
+                                <BrandLogo
+                                    variant="stacked"
+                                    className="h-16 sm:h-20 w-auto object-contain"
+                                />
                             </Link>
 
-                            <div className="space-y-2 text-center">
-                                <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+                            <div className="space-y-1 mt-1">
+                                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
                                     {title}
                                 </h1>
-                                <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+                                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                                     {description}
                                 </p>
                             </div>
                         </div>
+
+                        {/* Form content */}
                         {children}
                     </div>
                 </div>
 
-                {/* Decorative elements */}
-                <div className="absolute -z-10 top-0 left-0 w-full h-full">
-                    <div className="absolute top-10 left-10 w-2 h-2 bg-indigo-500 rounded-full animate-ping"></div>
-                    <div className="absolute bottom-10 right-10 w-2 h-2 bg-purple-500 rounded-full animate-ping animation-delay-1000"></div>
-                    <div className="absolute top-1/2 right-5 w-1 h-1 bg-pink-500 rounded-full animate-ping animation-delay-2000"></div>
+                {/* Professional SaaS Security Footer */}
+                <div className="flex flex-col items-center justify-center gap-2 text-center text-xs text-slate-500 dark:text-slate-500">
+                    <div className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-400">
+                        <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
+                        <span>Enterprise Grade Workspace Security</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500">
+                        <span>Privacy Policy</span>
+                        <span>•</span>
+                        <span>Terms of Service</span>
+                        <span>•</span>
+                        <span className="inline-flex items-center gap-1 font-medium text-slate-600 dark:text-slate-400">
+                            <BrandLogo variant="icon" className="size-3.5" />
+                            Firlabs Board
+                        </span>
+                    </div>
                 </div>
             </div>
-
-            <style jsx global>{`
-                @keyframes blob {
-                    0%, 100% {
-                        transform: translate(0, 0) scale(1);
-                    }
-                    33% {
-                        transform: translate(30px, -50px) scale(1.1);
-                    }
-                    66% {
-                        transform: translate(-20px, 20px) scale(0.9);
-                    }
-                }
-
-                .animate-blob {
-                    animation: blob 7s infinite;
-                }
-
-                .animation-delay-2000 {
-                    animation-delay: 2s;
-                }
-
-                .animation-delay-4000 {
-                    animation-delay: 4s;
-                }
-
-                .animation-delay-1000 {
-                    animation-delay: 1s;
-                }
-            `}</style>
         </div>
     );
 }

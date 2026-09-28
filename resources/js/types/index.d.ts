@@ -22,11 +22,19 @@ export interface NavItem {
     isActive?: boolean;
 }
 
+export interface BoardNavSummary {
+    id: number;
+    title: string;
+    background_color?: string;
+    background_image?: string;
+}
+
 export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
     sidebarOpen: boolean;
+    boards?: BoardNavSummary[];
     [key: string]: unknown;
 }
 

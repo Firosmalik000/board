@@ -1,16 +1,18 @@
-import AppLogoIcon from './app-logo-icon';
+import { cn } from '@/lib/utils';
+import BrandLogo from './brand-logo';
 
-export default function AppLogo() {
+export default function AppLogo({ className }: { className?: string }) {
     return (
-        <>
-            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                <AppLogoIcon className="size-5 fill-current text-white dark:text-black" />
+        <div className={cn('flex items-center gap-2 overflow-hidden select-none', className)}>
+            {/* Expanded sidebar logo: full horizontal logo */}
+            <div className="group-data-[collapsible=icon]:hidden flex items-center">
+                <BrandLogo variant="auto" size="md" className="h-7 w-auto" />
             </div>
-            <div className="ml-1 grid flex-1 text-left text-sm">
-                <span className="mb-0.5 truncate leading-tight font-semibold">
-                    X Board
-                </span>
+
+            {/* Collapsed icon mode: symbol mark only */}
+            <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center size-8">
+                <BrandLogo variant="icon" size="sm" className="size-7" />
             </div>
-        </>
+        </div>
     );
 }

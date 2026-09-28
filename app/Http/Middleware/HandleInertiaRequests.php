@@ -46,6 +46,13 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user() ? $request->user()->only(['id', 'name', 'email', 'avatar', 'created_at']) : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'boards' => fn () => $request->user()
+                ? $request->user()->allBoards()
+                    ->where('is_archived', false)
+                    ->select('boards.id', 'boards.title', 'boards.background_color', 'boards.background_image')
+                    ->latest('boards.updated_at')
+                    ->get()
+                : [],
             'flash' => [
                 'cardId' => $request->session()->get('cardId'),
                 'success' => $request->session()->get('success'),

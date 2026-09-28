@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { MentionInput } from '@/components/MentionInput'
 import { motion } from 'framer-motion'
-import { Calendar, User, Tag, MessageSquare, FolderKanban, Paperclip, Download, Trash2, Eye, UserPlus, X, CheckSquare, Plus, MoreVertical, Smile } from 'lucide-react'
+import { Calendar, User, Tag, MessageSquare, FolderKanban, Paperclip, Download, Trash2, Eye, UserPlus, X, CheckSquare, Plus, MoreVertical, Smile, Loader2, Edit2, Check } from 'lucide-react'
 import { useMemo } from 'react'
+import axios from 'axios'
 import {
   Select,
   SelectContent,
@@ -55,6 +56,7 @@ interface CardDetailModalProps {
   onAddComment: () => void
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onDeleteAttachment: (attachmentId: number) => void
+  onAddPendingFile?: (file: File) => void
   onRemovePendingFile?: (index: number) => void
   onOpenPreview: (url: string, filename: string) => void
   onToggleMember: (userId: number) => void
@@ -82,6 +84,7 @@ export function CardDetailModal({
   onAddComment,
   onFileUpload,
   onDeleteAttachment,
+  onAddPendingFile,
   onRemovePendingFile,
   onOpenPreview,
   onToggleMember,
@@ -145,9 +148,110 @@ export function CardDetailModal({
       })
     : selectedCard.members
 
+  const handleEditorPasteFile = async (file: File, editor: any) => {
+    const maxSize = 100 * 1024 * 1024 // 100MB
+    if (file.size > maxSize) {
+      toast.error('Ukuran file melebihi batas 100MB')
+      return
+    }
+
+    const isImg = file.type.startsWith('image/')
+
+    if (cardMode === 'create') {
+      onAddPendingFile?.(file)
+      if (isImg) {
+        const reader = new FileReader()
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            editor.chain().focus().setImage({ src: reader.result, alt: file.name }).run()
+          }
+        }
+        reader.readAsDataURL(file)
+        toast.success(`Gambar disisipkan & ditambahkan ke lampiran kartu`)
+      } else {
+        editor.chain().focus().insertContent(`<p>📎 <strong>${file.name}</strong> <em>(${(file.size / 1024 / 1024).toFixed(2)} MB - akan diunggah saat kartu dibuat)</em></p>`).run()
+        toast.success(`File "${file.name}" ditambahkan ke lampiran kartu`)
+      }
+      return
+    }
+
+    // View mode: upload immediately to server
+    const toastId = toast.loading(`Mengunggah "${file.name || 'file'}" dari clipboard...`)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await axios.post(`/cards/${selectedCard.id}/attachments`, formData, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      if (response.data?.success && response.data.attachment) {
+        const attachment = response.data.attachment
+        if (attachment.is_image) {
+          editor.chain().focus().setImage({ src: attachment.url, alt: attachment.original_filename }).run()
+          toast.success('Gambar berhasil diunggah & disisipkan ke deskripsi!', { id: toastId })
+        } else {
+          editor.chain().focus().insertContent(`<p><a href="${attachment.url}" target="_blank" rel="noopener noreferrer" class="text-primary underline font-medium">📎 ${attachment.original_filename} (${attachment.human_file_size})</a></p>`).run()
+          toast.success('File berhasil diunggah & ditautkan di deskripsi!', { id: toastId })
+        }
+
+        const currentAttachments = selectedCard.attachments || []
+        onFieldChange('attachments', [...currentAttachments, attachment])
+      } else {
+        toast.error('Gagal mengunggah file', { id: toastId })
+      }
+    } catch (err: any) {
+      console.error('Paste upload error:', err)
+      toast.error(err.response?.data?.message || 'Gagal mengunggah file', { id: toastId })
+    }
+  }
+
+  const handleDialogPaste = (e: React.ClipboardEvent) => {
+    const target = e.target as HTMLElement
+    const isTextEditing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+    if (isTextEditing) return
+
+    const items = e.clipboardData?.items
+    if (!items) return
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file') {
+        const file = items[i].getAsFile()
+        if (file) {
+          e.preventDefault()
+          if (cardMode === 'create') {
+            onAddPendingFile?.(file)
+            toast.success(`File "${file.name}" ditambahkan ke lampiran`)
+          } else {
+            const toastId = toast.loading(`Mengunggah "${file.name}" ke lampiran...`)
+            const formData = new FormData()
+            formData.append('file', file)
+            axios
+              .post(`/cards/${selectedCard.id}/attachments`, formData, {
+                headers: { 'Accept': 'application/json', 'Content-Type': 'multipart/form-data' },
+              })
+              .then((res) => {
+                if (res.data?.success && res.data.attachment) {
+                  toast.success(`"${file.name}" berhasil ditambahkan ke lampiran!`, { id: toastId })
+                  onFieldChange('attachments', [...(selectedCard.attachments || []), res.data.attachment])
+                }
+              })
+              .catch(() => {
+                toast.error('Gagal mengunggah lampiran', { id: toastId })
+              })
+          }
+          break
+        }
+      }
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[95vh] w-full max-w-full sm:max-w-[95vw] sm:min-w-[60vw] sm:w-[1600px] overflow-y-auto border-0 shadow-2xl bg-gradient-to-br from-background via-background to-background/95 p-3 sm:p-6">
+      <DialogContent onPaste={handleDialogPaste} className="max-h-[95vh] w-full max-w-full sm:max-w-[95vw] sm:min-w-[60vw] sm:w-[1600px] overflow-y-auto border-0 shadow-2xl bg-gradient-to-br from-background via-background to-background/95 p-3 sm:p-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -199,7 +303,8 @@ export function CardDetailModal({
                   <RichTextEditor
                     content={selectedCard.description || ''}
                     onChange={(content) => onFieldChange('description', content)}
-                    placeholder="Add detailed information, requirements, or notes... Use the toolbar to format text."
+                    onPasteFile={handleEditorPasteFile}
+                    placeholder="Add detailed information, requirements, or notes... Gunakan toolbar atau tekan Ctrl+V untuk menempelkan gambar/file langsung."
                     className="min-h-[150px] sm:min-h-[200px]"
                   />
                 </div>
@@ -661,47 +766,54 @@ function PendingChecklistSection({
 }) {
   const [newChecklistItem, setNewChecklistItem] = useState('')
   const [isAdding, setIsAdding] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const handleAdd = () => {
     if (!newChecklistItem.trim()) {
-      toast.error('Please enter checklist item')
+      toast.error('Ketik judul checklist terlebih dahulu')
       return
     }
-    onAddPendingChecklist?.(newChecklistItem)
+    onAddPendingChecklist?.(newChecklistItem.trim())
     setNewChecklistItem('')
-    setIsAdding(false)
+    toast.success('Checklist ditambahkan ke daftar')
+    // Keep input focused for rapid continuous addition
+    setTimeout(() => {
+      inputRef.current?.focus()
+    }, 50)
   }
 
   return (
-    <div>
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label className="text-base font-semibold">
-          <CheckSquare className="mr-2 inline h-4 w-4" />
+        <Label className="text-sm sm:text-base font-semibold flex items-center gap-2">
+          <CheckSquare className="h-4 w-4 text-primary" />
           Checklist
           {pendingChecklists.length > 0 && (
-            <span className="ml-2 text-sm text-muted-foreground">
-              {pendingChecklists.length} item(s)
-            </span>
+            <Badge variant="secondary" className="text-xs font-normal">
+              {pendingChecklists.length} item
+            </Badge>
           )}
         </Label>
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="space-y-2">
         {/* Pending Checklist Items */}
         {pendingChecklists.map((item, index) => (
           <div
             key={index}
-            className="group flex items-center gap-3 rounded-md border border-dashed p-3 hover:bg-muted/50 transition-colors"
+            className="group flex items-center gap-3 rounded-md border border-dashed border-border/80 bg-muted/20 p-2.5 hover:bg-muted/40 transition-colors"
           >
-            <CheckSquare className="h-4 w-4 text-muted-foreground" />
-            <span className="flex-1 text-sm">{item}</span>
+            <CheckSquare className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="flex-1 text-sm font-medium">{item}</span>
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={() => onRemovePendingChecklist?.(index)}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+              title="Hapus checklist"
             >
-              <Trash2 className="h-4 w-4 text-destructive" />
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         ))}
@@ -709,22 +821,28 @@ function PendingChecklistSection({
         {/* Add New Checklist Item */}
         {!isAdding ? (
           <Button
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => setIsAdding(true)}
-            className="w-full"
+            className="w-full text-xs font-medium border-dashed hover:border-primary/50 hover:bg-primary/5"
           >
-            <Plus className="mr-2 h-4 w-4" />
-            Add checklist item
+            <Plus className="mr-1.5 h-3.5 w-3.5 text-primary" />
+            Tambah butir checklist
           </Button>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex gap-2 p-2 rounded-lg border bg-muted/20">
             <Input
+              ref={inputRef}
               value={newChecklistItem}
               onChange={(e) => setNewChecklistItem(e.target.value)}
-              placeholder="Enter checklist item..."
+              placeholder="Ketik butir checklist lalu tekan Enter..."
+              className="h-8 text-sm bg-background"
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAdd()
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleAdd()
+                }
                 if (e.key === 'Escape') {
                   setIsAdding(false)
                   setNewChecklistItem('')
@@ -732,18 +850,20 @@ function PendingChecklistSection({
               }}
               autoFocus
             />
-            <Button onClick={handleAdd} size="sm">
-              Add
+            <Button type="button" onClick={handleAdd} size="sm" className="h-8 text-xs px-3">
+              Tambah
             </Button>
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={() => {
                 setIsAdding(false)
                 setNewChecklistItem('')
               }}
+              className="h-8 text-xs px-2"
             >
-              Cancel
+              Batal
             </Button>
           </div>
         )}
@@ -756,32 +876,57 @@ function PendingChecklistSection({
 function ChecklistSection({ selectedCard }: { selectedCard: any }) {
   const [newChecklistItem, setNewChecklistItem] = useState('')
   const [isAdding, setIsAdding] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [syncingIds, setSyncingIds] = useState<number[]>([])
+  const [deletingIds, setDeletingIds] = useState<number[]>([])
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const checklists = selectedCard.checklists || []
+  const completedCount = checklists.filter((item: any) => item.is_completed).length
+  const totalCount = checklists.length
+  const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
 
   const handleAddChecklist = () => {
-    if (!newChecklistItem.trim()) {
-      toast.error('Please enter checklist item')
+    if (!newChecklistItem.trim() || isSubmitting) {
+      if (!newChecklistItem.trim()) toast.error('Ketik judul checklist terlebih dahulu')
       return
     }
 
+    setIsSubmitting(true)
+    const toastId = toast.loading('Menambahkan butir checklist...')
+
     router.post(
       `/cards/${selectedCard.id}/checklists`,
-      { title: newChecklistItem },
+      { title: newChecklistItem.trim() },
       {
         preserveScroll: true,
         preserveState: true,
         onSuccess: () => {
           setNewChecklistItem('')
-          setIsAdding(false)
-          toast.success('Checklist item added')
+          toast.success('Checklist berhasil ditambahkan!', { id: toastId, duration: 1800 })
+          // Keep input focused for next rapid entry
+          setTimeout(() => {
+            inputRef.current?.focus()
+          }, 50)
         },
         onError: () => {
-          toast.error('Failed to add checklist item')
+          toast.error('Gagal menambahkan checklist', { id: toastId })
+        },
+        onFinish: () => {
+          setIsSubmitting(false)
         },
       }
     )
   }
 
   const handleToggleChecklist = (checklistId: number, isCompleted: boolean) => {
+    if (syncingIds.includes(checklistId)) return
+
+    setSyncingIds((prev) => [...prev, checklistId])
+
     router.patch(
       `/checklists/${checklistId}`,
       { is_completed: !isCompleted },
@@ -789,101 +934,248 @@ function ChecklistSection({ selectedCard }: { selectedCard: any }) {
         preserveScroll: true,
         preserveState: true,
         onSuccess: () => {
-          // Success handled by page reload
+          toast.success(!isCompleted ? '✓ Checklist selesai!' : 'Ditandai belum selesai', {
+            id: `chk-${checklistId}`,
+            duration: 1500,
+          })
         },
         onError: () => {
-          toast.error('Failed to update checklist item')
+          toast.error('Gagal mengubah status checklist', { id: `chk-${checklistId}` })
+        },
+        onFinish: () => {
+          setSyncingIds((prev) => prev.filter((id) => id !== checklistId))
         },
       }
     )
   }
 
-  const handleDeleteChecklist = (checklistId: number) => {
-    if (!confirm('Are you sure you want to delete this checklist item?')) return
+  const handleStartEdit = (item: any) => {
+    setEditingId(item.id)
+    setEditingTitle(item.title)
+  }
+
+  const handleSaveEdit = (checklistId: number) => {
+    if (!editingTitle.trim() || isSavingEdit) return
+
+    setIsSavingEdit(true)
+    const toastId = toast.loading('Memperbarui checklist...')
+
+    router.patch(
+      `/checklists/${checklistId}`,
+      { title: editingTitle.trim() },
+      {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+          toast.success('Checklist diperbarui', { id: toastId, duration: 1500 })
+          setEditingId(null)
+          setEditingTitle('')
+        },
+        onError: () => {
+          toast.error('Gagal memperbarui checklist', { id: toastId })
+        },
+        onFinish: () => {
+          setIsSavingEdit(false)
+        },
+      }
+    )
+  }
+
+  const handleDeleteChecklist = (checklistId: number, title: string) => {
+    if (deletingIds.includes(checklistId)) return
+    setDeletingIds((prev) => [...prev, checklistId])
+
+    const toastId = toast.loading(`Menghapus "${title}"...`)
 
     router.delete(`/checklists/${checklistId}`, {
       preserveScroll: true,
       preserveState: true,
       onSuccess: () => {
-        toast.success('Checklist item deleted')
+        toast.success('Checklist berhasil dihapus', { id: toastId, duration: 1500 })
       },
       onError: () => {
-        toast.error('Failed to delete checklist item')
+        toast.error('Gagal menghapus checklist', { id: toastId })
+      },
+      onFinish: () => {
+        setDeletingIds((prev) => prev.filter((id) => id !== checklistId))
       },
     })
   }
 
-  const checklists = selectedCard.checklists || []
-  const completedCount = checklists.filter((item: any) => item.is_completed).length
-  const totalCount = checklists.length
-
   return (
-    <div>
-      <div className="flex items-center justify-between">
-        <Label className="text-base font-semibold">
-          <CheckSquare className="mr-2 inline h-4 w-4" />
-          Checklist
+    <div className="space-y-3">
+      {/* Header & Progress */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm sm:text-base font-semibold flex items-center gap-2">
+            <CheckSquare className="h-4 w-4 text-primary" />
+            Checklist
+            {totalCount > 0 && (
+              <span className="text-xs font-normal text-muted-foreground">
+                ({completedCount}/{totalCount})
+              </span>
+            )}
+          </Label>
           {totalCount > 0 && (
-            <span className="ml-2 text-sm text-muted-foreground">
-              {completedCount}/{totalCount}
-            </span>
+            <Badge
+              variant={percent === 100 ? 'default' : 'secondary'}
+              className={percent === 100 ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}
+            >
+              {percent === 100 ? '✓ Selesai Semua!' : `${percent}%`}
+            </Badge>
           )}
-        </Label>
-        {totalCount > 0 && completedCount === totalCount && totalCount > 0 && (
-          <Badge variant="default" className="bg-green-600">
-            Complete!
-          </Badge>
+        </div>
+
+        {/* Trello-like Progress Bar */}
+        {totalCount > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-muted-foreground w-7 text-right">
+              {percent}%
+            </span>
+            <div className="h-2 flex-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-300 rounded-full ${
+                  percent === 100 ? 'bg-emerald-500' : 'bg-primary'
+                }`}
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+          </div>
         )}
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="space-y-2">
         {/* Checklist Items */}
-        {checklists.map((item: any) => (
-          <div
-            key={item.id}
-            className="group flex items-center gap-3 rounded-md border p-3 hover:bg-muted/50 transition-colors"
-          >
-            <Checkbox
-              checked={item.is_completed}
-              onCheckedChange={() => handleToggleChecklist(item.id, item.is_completed)}
-            />
-            <span
-              className={`flex-1 text-sm ${
-                item.is_completed ? 'line-through text-muted-foreground' : ''
-              }`}
-            >
-              {item.title}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDeleteChecklist(item.id)}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-          </div>
-        ))}
+        {checklists.map((item: any) => {
+          const isSyncing = syncingIds.includes(item.id)
+          const isDeleting = deletingIds.includes(item.id)
+          const isEditing = editingId === item.id
 
-        {/* Add New Checklist Item */}
+          return (
+            <div
+              key={item.id}
+              className={`group flex items-center gap-3 rounded-md border p-2.5 transition-all ${
+                item.is_completed ? 'bg-muted/30 border-border/50' : 'bg-background hover:bg-muted/30'
+              } ${isDeleting ? 'opacity-40 pointer-events-none' : ''}`}
+            >
+              {/* Checkbox or Loading Spinner */}
+              <div className="flex items-center justify-center size-5 shrink-0">
+                {isSyncing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                ) : (
+                  <Checkbox
+                    checked={item.is_completed}
+                    onCheckedChange={() => handleToggleChecklist(item.id, item.is_completed)}
+                    disabled={isSyncing || isDeleting}
+                    className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                  />
+                )}
+              </div>
+
+              {/* Title / Inline Edit */}
+              {isEditing ? (
+                <div className="flex-1 flex items-center gap-1.5 min-w-0">
+                  <Input
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveEdit(item.id)
+                      if (e.key === 'Escape') setEditingId(null)
+                    }}
+                    autoFocus
+                    className="h-7 text-xs bg-background"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleSaveEdit(item.id)}
+                    disabled={isSavingEdit}
+                    className="h-7 px-2 text-xs"
+                  >
+                    {isSavingEdit ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingId(null)}
+                    className="h-7 px-2 text-xs"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <span
+                  onDoubleClick={() => handleStartEdit(item)}
+                  className={`flex-1 text-sm select-none cursor-pointer transition-colors ${
+                    item.is_completed ? 'line-through text-muted-foreground' : 'text-foreground'
+                  }`}
+                  title="Klik 2x untuk mengedit teks"
+                >
+                  {item.title}
+                </span>
+              )}
+
+              {/* Action Buttons */}
+              {!isEditing && (
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleStartEdit(item)}
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                    title="Edit teks"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteChecklist(item.id, item.title)}
+                    disabled={isDeleting}
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                    title="Hapus checklist"
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="h-3 w-3 animate-spin text-destructive" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        {/* Add New Checklist Item Form */}
         {!isAdding ? (
           <Button
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => setIsAdding(true)}
-            className="w-full"
+            className="w-full text-xs font-medium border-dashed hover:border-primary/50 hover:bg-primary/5"
           >
-            <Plus className="mr-2 h-4 w-4" />
-            Add item
+            <Plus className="mr-1.5 h-3.5 w-3.5 text-primary" />
+            Tambah butir checklist
           </Button>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 p-2.5 rounded-lg border bg-muted/20">
             <Input
+              ref={inputRef}
               value={newChecklistItem}
               onChange={(e) => setNewChecklistItem(e.target.value)}
-              placeholder="Enter checklist item..."
+              placeholder="Ketik butir checklist baru (tekan Enter untuk simpan)..."
+              disabled={isSubmitting}
+              className="h-8 text-sm bg-background"
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddChecklist()
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleAddChecklist()
+                }
                 if (e.key === 'Escape') {
                   setIsAdding(false)
                   setNewChecklistItem('')
@@ -891,19 +1183,40 @@ function ChecklistSection({ selectedCard }: { selectedCard: any }) {
               }}
               autoFocus
             />
-            <Button onClick={handleAddChecklist} size="sm">
-              Add
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setIsAdding(false)
-                setNewChecklistItem('')
-              }}
-            >
-              Cancel
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                onClick={handleAddChecklist}
+                disabled={isSubmitting}
+                size="sm"
+                className="h-8 text-xs px-3"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  'Tambah'
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={isSubmitting}
+                onClick={() => {
+                  setIsAdding(false)
+                  setNewChecklistItem('')
+                }}
+                className="h-8 text-xs px-2"
+              >
+                Batal
+              </Button>
+              <span className="text-[11px] text-muted-foreground ml-auto hidden sm:inline">
+                Tekan <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono border">Enter</kbd> untuk simpan beruntun
+              </span>
+            </div>
           </div>
         )}
       </div>

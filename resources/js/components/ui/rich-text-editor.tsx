@@ -2,6 +2,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
+import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import {
   Bold,
@@ -18,10 +19,11 @@ import {
   Heading3,
   Link as LinkIcon,
   Underline as UnderlineIcon,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { Button } from './button'
 import { cn } from '@/lib/utils'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { Input } from './input'
 import {
   Popover,
@@ -35,6 +37,7 @@ interface RichTextEditorProps {
   placeholder?: string
   editable?: boolean
   className?: string
+  onPasteFile?: (file: File, editor: any) => void | Promise<void>
 }
 
 export function RichTextEditor({
@@ -42,10 +45,13 @@ export function RichTextEditor({
   onChange,
   placeholder = 'Write something...',
   editable = true,
-  className
+  className,
+  onPasteFile,
 }: RichTextEditorProps) {
   const [linkUrl, setLinkUrl] = useState('')
   const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const editorRef = useRef<any>(null)
 
   // Memoize extensions to prevent re-creation on every render
   const extensions = useMemo(() => [
@@ -59,6 +65,13 @@ export function RichTextEditor({
       openOnClick: false,
       HTMLAttributes: {
         class: 'text-primary underline cursor-pointer',
+      },
+    }),
+    Image.configure({
+      inline: false,
+      allowBase64: true,
+      HTMLAttributes: {
+        class: 'rounded-lg max-w-full my-3 border border-border shadow-xs hover:shadow-md transition-shadow object-contain max-h-[480px]',
       },
     }),
     Placeholder.configure({
@@ -75,10 +88,45 @@ export function RichTextEditor({
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[150px] px-3 py-2',
+        class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[150px] px-3 py-2',
+      },
+      handlePaste: (view, event) => {
+        const items = event.clipboardData?.items
+        if (items) {
+          for (let i = 0; i < items.length; i++) {
+            if (items[i].kind === 'file') {
+              const file = items[i].getAsFile()
+              if (file && onPasteFile) {
+                event.preventDefault()
+                if (editorRef.current) {
+                  onPasteFile(file, editorRef.current)
+                }
+                return true
+              }
+            }
+          }
+        }
+        return false
+      },
+      handleDrop: (view, event, _slice, moved) => {
+        if (!moved && event.dataTransfer?.files?.length) {
+          const file = event.dataTransfer.files[0]
+          if (file && onPasteFile) {
+            event.preventDefault()
+            if (editorRef.current) {
+              onPasteFile(file, editorRef.current)
+            }
+            return true
+          }
+        }
+        return false
       },
     },
   })
+
+  useEffect(() => {
+    editorRef.current = editor
+  }, [editor])
 
   if (!editor) {
     return null
@@ -282,6 +330,36 @@ export function RichTextEditor({
           </PopoverContent>
         </Popover>
 
+        {onPasteFile && (
+          <>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  onPasteFile(file, editor)
+                }
+                if (imageInputRef.current) {
+                  imageInputRef.current.value = ''
+                }
+              }}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => imageInputRef.current?.click()}
+              title="Sisipkan Gambar (atau tekan Ctrl+V)"
+            >
+              <ImageIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            </Button>
+          </>
+        )}
+
         <div className="w-px h-6 bg-border self-center mx-1" />
 
         <ToolbarButton
@@ -303,6 +381,12 @@ export function RichTextEditor({
 
       {/* Editor Content */}
       <EditorContent editor={editor} />
+
+      {/* Clipboard Paste Hint Footer */}
+      <div className="border-t bg-muted/20 px-3 py-1 flex items-center justify-between text-[11px] text-muted-foreground/70 select-none">
+        <span>Tekan <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono border">Ctrl+V</kbd> untuk menempelkan gambar/file langsung dari clipboard</span>
+        <span className="hidden sm:inline">Mendukung drag & drop</span>
+      </div>
     </div>
   )
 }

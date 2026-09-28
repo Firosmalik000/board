@@ -493,10 +493,14 @@ export function BoardHeader({ board, onBoardUpdate, lastSyncTime, isPolling, onT
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => router.visit(`/boards/${board.id}/report`)}>
+                <BarChart3 className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span>Report & Analytics</span>
+              </DropdownMenuItem>
               <DropdownMenuItem>
                 <Star className="mr-2 h-4 w-4" />
-                Add to Favorites
+                <span>Add to Favorites</span>
               </DropdownMenuItem>
               {isCurrentUserAdmin() && (
                 <>

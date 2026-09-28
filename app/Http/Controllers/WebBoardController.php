@@ -87,7 +87,7 @@ class WebBoardController extends Controller
             'metadata' => ['board_name' => $board->title],
         ]);
 
-        return redirect()->route('boards.index');
+        return redirect()->route('boards.show', $board->id);
     }
 
     /**
@@ -145,6 +145,48 @@ class WebBoardController extends Controller
             'board' => $board,
             'activities' => $activities,
             'totalActivities' => $totalActivities,
+        ]);
+    }
+
+    /**
+     * Display board analytics and report.
+     */
+    public function report(Request $request, Board $board)
+    {
+        // Check if user has access
+        if (!$board->hasMember($request->user())) {
+            abort(403, 'Unauthorized to access this board.');
+        }
+
+        $board->load([
+            'owner:id,name,avatar,email',
+            'members:id,name,email,avatar',
+            'labels:id,name,color',
+            'lists' => function ($query) {
+                $query->select('id', 'board_id', 'title', 'position')
+                    ->orderBy('position')
+                    ->where('is_archived', false);
+            },
+            'lists.cards' => function ($query) {
+                $query->select('id', 'list_id', 'title', 'description', 'position', 'due_date', 'is_completed', 'cover_color', 'created_by', 'created_at', 'updated_at')
+                    ->orderBy('position')
+                    ->where('is_archived', false);
+            },
+            'lists.cards.labels:id,name,color',
+            'lists.cards.members:id,name,avatar,email',
+            'lists.cards.creator:id,name,avatar',
+            'lists.cards.checklists:id,card_id,title,is_completed,position',
+        ]);
+
+        $activities = ActivityLog::where('board_id', $board->id)
+            ->with('user:id,name,avatar')
+            ->latest('created_at')
+            ->limit(100)
+            ->get(['id', 'user_id', 'action', 'entity_type', 'entity_id', 'metadata', 'created_at']);
+
+        return Inertia::render('boards/report', [
+            'board' => $board,
+            'activities' => $activities,
         ]);
     }
 
@@ -1008,6 +1050,13 @@ public function updateCard(Request $request, Card $card)
             'entity_type' => 'card',
             'entity_id' => $card->id,
         ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'attachment' => $attachment,
+            ]);
+        }
 
         return back();
     }

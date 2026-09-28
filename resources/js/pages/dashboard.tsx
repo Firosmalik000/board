@@ -1,12 +1,20 @@
 import AppLayout from '@/layouts/app-layout'
 import { dashboard } from '@/routes'
 import { type BreadcrumbItem } from '@/types'
+import { BrandLogo } from '@/components/shared/common'
 import { Head, Link, router } from '@inertiajs/react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -18,16 +26,16 @@ import {
   User,
   Clock,
   Trello,
-  Sparkles,
   ArrowRight,
   Calendar,
-  Target,
-  Zap,
-  UserPlus
+  Sparkles,
+  Layers,
+  Star,
+  Activity,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -53,7 +61,7 @@ interface Board {
   }>
 }
 
-interface Card {
+interface CardItem {
   id: number
   title: string
   is_completed: boolean
@@ -79,7 +87,7 @@ interface Statistics {
 interface DashboardProps {
   statistics: Statistics
   recentBoards: Board[]
-  recentCards: Card[]
+  recentCards: CardItem[]
   error?: string
 }
 
@@ -110,20 +118,20 @@ export default function Dashboard({ statistics, recentBoards, recentCards, error
     }
   })
 
-  // Save form data to localStorage whenever it changes
+  // Save form data to localStorage
   useEffect(() => {
     localStorage.setItem('dashboard_board_form', JSON.stringify(formData))
   }, [formData])
 
-  // Show error toast if there's an error from backend
+  // Error feedback
   useEffect(() => {
     if (error) {
       toast.error(error, {
         duration: 5000,
         action: {
           label: 'Refresh',
-          onClick: () => window.location.reload()
-        }
+          onClick: () => window.location.reload(),
+        },
       })
     }
   }, [error])
@@ -139,7 +147,7 @@ export default function Dashboard({ statistics, recentBoards, recentCards, error
     setIsLoading(true)
     router.post('/boards', formData, {
       onSuccess: () => {
-        toast.success('Board created successfully! 🎉')
+        toast.success('Board created successfully!')
         setIsCreateDialogOpen(false)
         const resetData = {
           title: '',
@@ -148,11 +156,11 @@ export default function Dashboard({ statistics, recentBoards, recentCards, error
           background_color: '#0079bf',
         }
         setFormData(resetData)
-        // Clear localStorage after successful creation
         localStorage.removeItem('dashboard_board_form')
       },
       onError: (errors) => {
-        const errorMessage = errors.title || errors.description || 'Failed to create board. Please try again.'
+        const errorMessage =
+          errors.title || errors.description || 'Failed to create board. Please try again.'
         toast.error(errorMessage)
       },
       onFinish: () => {
@@ -161,298 +169,206 @@ export default function Dashboard({ statistics, recentBoards, recentCards, error
     })
   }
 
-  const colors = [
-    '#0079bf', '#d29034', '#519839', '#b04632', '#89609e',
-    '#cd5a91', '#4bbf6b', '#00aecc', '#838c91'
+  // Trello official preset colors
+  const trelloColors = [
+    '#0079bf', // Blue
+    '#d29034', // Orange
+    '#519839', // Green
+    '#b04632', // Red
+    '#89609e', // Purple
+    '#cd5a91', // Pink
+    '#4bbf6b', // Lime
+    '#00aecc', // Sky
+    '#838c91', // Slate
   ]
 
-  const completionRate = statistics.totalCards > 0
-    ? Math.round((statistics.completedTasks / statistics.totalCards) * 100)
-    : 0
+  const completionRate =
+    statistics.totalCards > 0
+      ? Math.round((statistics.completedTasks / statistics.totalCards) * 100)
+      : 0
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Dashboard" />
+      <Head title="Dashboard - Workspace" />
 
-      <div className="flex h-full flex-1 flex-col gap-8 p-6">
-        {/* Welcome Section with Enhanced Gradient */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-8 text-white shadow-2xl"
-        >
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iYSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVHJhbnNmb3JtPSJyb3RhdGUoNDUpIj48cGF0aCBkPSJNLS41IDM5LjVoNDF2MWgtNDF6IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9Ii4wNSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNhKSIvPjwvc3ZnPg==')] opacity-30" />
-          <div className="relative z-10">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="flex items-center gap-2 mb-2"
-            >
-              <Sparkles className="h-6 w-6 animate-pulse" />
-              <span className="text-sm font-medium opacity-90">Welcome back!</span>
-            </motion.div>
-            <motion.h1
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="text-4xl font-bold mb-2 tracking-tight"
-            >
-              Dashboard
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-              className="text-lg opacity-90"
-            >
-              Here's what's happening with your projects today
-            </motion.p>
+      <div className="flex-1 space-y-8 p-4 md:p-8 max-w-7xl mx-auto w-full">
+        {/* Workspace Profile Header (Trello Style) */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-border">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 shadow-xs shrink-0">
+              <BrandLogo variant="icon" size="sm" className="size-8 object-contain" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                  Firlabs Board Workspace
+                </h1>
+                <Badge variant="outline" className="text-xs font-normal">
+                  Free
+                </Badge>
+              </div>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                Kelola board kolaboratif, tugas tim, dan visualisasi kanban Anda.
+              </p>
+            </div>
           </div>
-          <div className="absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-white/10 blur-3xl animate-pulse" />
-          <div className="absolute -left-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        </motion.div>
 
-        {/* Statistics Cards with Gradients */}
-        <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-5">
-          {/* Total Boards */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 opacity-5" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Boards</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                <LayoutGrid className="h-5 w-5 text-white" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold bg-gradient-to-br from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                {statistics.totalBoards}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                <Target className="h-3 w-3" />
-                Active workspaces
-              </p>
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* Total Cards */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500 opacity-5" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Cards</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <CheckSquare className="h-5 w-5 text-white" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold bg-gradient-to-br from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                {statistics.totalCards}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                <Zap className="h-3 w-3" />
-                Tasks created
-              </p>
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* Completed Tasks */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-500 opacity-5" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Completed</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-white" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold bg-gradient-to-br from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                {statistics.completedTasks}
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-green-500 to-emerald-500 transition-all duration-500"
-                    style={{ width: `${completionRate}%` }}
-                  />
-                </div>
-                <span className="text-xs font-medium text-muted-foreground">{completionRate}%</span>
-              </div>
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* Created Cards */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-red-500 opacity-5" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Created</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
-                <Plus className="h-5 w-5 text-white" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold bg-gradient-to-br from-orange-600 to-red-600 bg-clip-text text-transparent">
-                {statistics.createdCards}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                <User className="h-3 w-3" />
-                Cards you created
-              </p>
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* Assigned Cards */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-          >
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-500 opacity-5" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Assigned</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
-                <UserPlus className="h-5 w-5 text-white" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold bg-gradient-to-br from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                {statistics.assignedCards}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                Cards assigned to you
-              </p>
-            </CardContent>
-          </Card>
-          </motion.div>
+          <div className="flex items-center gap-2.5">
+            {/* Quick Create Board Trigger */}
+            <Button
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="gap-2 bg-[#0052cc] hover:bg-[#0747a6] text-white font-medium text-xs sm:text-sm shadow-xs"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create Board</span>
+            </Button>
+          </div>
         </div>
 
-        {/* Recent Boards Section */}
+        {/* Clean Workspace Metrics Bar */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+          <div className="p-4 rounded-xl border border-border bg-card/60 shadow-xs">
+            <div className="flex items-center justify-between text-muted-foreground mb-1">
+              <span className="text-xs font-medium">Total Boards</span>
+              <LayoutGrid className="h-4 w-4 text-blue-600" />
+            </div>
+            <div className="text-2xl font-bold text-foreground">{statistics.totalBoards}</div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Ruang kerja aktif</p>
+          </div>
+
+          <div className="p-4 rounded-xl border border-border bg-card/60 shadow-xs">
+            <div className="flex items-center justify-between text-muted-foreground mb-1">
+              <span className="text-xs font-medium">Total Tugas</span>
+              <CheckSquare className="h-4 w-4 text-purple-600" />
+            </div>
+            <div className="text-2xl font-bold text-foreground">{statistics.totalCards}</div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{statistics.createdCards} dibuat oleh Anda</p>
+          </div>
+
+          <div className="p-4 rounded-xl border border-border bg-card/60 shadow-xs">
+            <div className="flex items-center justify-between text-muted-foreground mb-1">
+              <span className="text-xs font-medium">Ditugaskan ke Anda</span>
+              <User className="h-4 w-4 text-blue-500" />
+            </div>
+            <div className="text-2xl font-bold text-foreground">{statistics.assignedCards}</div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Tugas yang perlu diselesaikan</p>
+          </div>
+
+          <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 shadow-xs">
+            <div className="flex items-center justify-between text-emerald-800 dark:text-emerald-300 mb-1">
+              <span className="text-xs font-medium">Tingkat Selesai</span>
+              <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+                {completionRate}%
+              </span>
+              <span className="text-xs text-emerald-600 font-medium">
+                ({statistics.completedTasks} selesai)
+              </span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-emerald-500/20 mt-2 overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                style={{ width: `${completionRate}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Your Boards Grid (Authentic Trello Look) */}
         <div>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <Trello className="h-6 w-6 text-primary" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Trello className="h-5 w-5 text-slate-700 dark:text-slate-300" />
+              <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
                 Your Boards
               </h2>
-              <p className="text-sm text-muted-foreground mt-1">Quick access to your recent workspaces</p>
             </div>
-            <Button asChild variant="outline" className="group">
+            <Button asChild variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground">
               <Link href="/boards">
-                View All
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                <span>View all boards</span>
+                <ArrowRight className="ml-1 h-3.5 w-3.5" />
               </Link>
             </Button>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Create New Board Card */}
+          <div className="grid gap-3.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {/* Create New Board Card Tile (Iconic Trello Tile) */}
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Card className="group cursor-pointer border-2 border-dashed border-muted-foreground/25 hover:border-primary hover:bg-primary/5 transition-all duration-300 h-40 relative overflow-hidden hover:shadow-lg hover:scale-105">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  {/* Shimmer effect on hover */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                <div className="h-28 sm:h-32 rounded-xl bg-slate-100 dark:bg-slate-900/80 hover:bg-slate-200/70 dark:hover:bg-slate-800/80 border border-dashed border-slate-300 dark:border-slate-700 cursor-pointer flex flex-col items-center justify-center gap-2 text-slate-700 dark:text-slate-300 transition-all shadow-xs group">
+                  <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Plus className="h-4 w-4" />
                   </div>
-                  <CardContent className="flex flex-col items-center justify-center h-full space-y-3 relative z-10">
-                    <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center group-hover:scale-110 group-hover:rotate-90 transition-all duration-300 shadow-lg">
-                      <Plus className="h-7 w-7 text-white" />
-                    </div>
-                    <div className="text-center">
-                      <p className="font-semibold text-lg group-hover:text-primary transition-colors">Create New Board</p>
-                      <p className="text-xs text-muted-foreground mt-1">Start organizing your tasks</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                  <span className="text-xs sm:text-sm font-medium">Create new board</span>
+                </div>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md border-0 shadow-2xl">
+
+              <DialogContent className="sm:max-w-md p-6">
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 text-2xl">
-                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
-                      <Sparkles className="h-4 w-4 text-white" />
-                    </div>
-                    Create New Board
-                  </DialogTitle>
-                  <DialogDescription className="text-base">
-                    Create a new board to organize your tasks and projects efficiently
+                  <DialogTitle className="text-lg font-bold">Create Board</DialogTitle>
+                  <DialogDescription className="text-xs">
+                    Set a title, visibility, and theme color for your workspace board.
                   </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleCreateBoard} className="space-y-5">
-                  <div className="space-y-2">
-                    <Label htmlFor="title" className="text-sm font-semibold">Board Title *</Label>
+
+                <form onSubmit={handleCreateBoard} className="space-y-4 pt-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="title" className="text-xs font-semibold">
+                      Board Title *
+                    </Label>
                     <Input
                       id="title"
-                      placeholder="My Awesome Board"
+                      placeholder="e.g. Marketing Launch, Sprint 24..."
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       required
-                      className="focus-visible:ring-2 focus-visible:ring-primary transition-all h-11"
                       autoFocus
+                      className="h-9 text-sm"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="description" className="text-sm font-semibold">Description</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="description" className="text-xs font-semibold">
+                      Description
+                    </Label>
                     <Input
                       id="description"
-                      placeholder="What's this board about?"
+                      placeholder="What is this board for?"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="transition-all h-11"
+                      className="h-9 text-sm"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="visibility" className="text-sm font-semibold">Visibility</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="visibility" className="text-xs font-semibold">
+                      Visibility
+                    </Label>
                     <select
                       id="visibility"
-                      className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer hover:border-primary/50"
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0052cc]"
                       value={formData.visibility}
                       onChange={(e) => setFormData({ ...formData, visibility: e.target.value })}
                     >
-                      <option value="private">🔒 Private - Only you can see</option>
-                      <option value="team">👥 Team - Visible to team members</option>
-                      <option value="public">🌍 Public - Everyone can see</option>
+                      <option value="private">🔒 Private - Only you and invited members</option>
+                      <option value="team">👥 Team - All workspace members</option>
+                      <option value="public">🌍 Public - Anyone can view</option>
                     </select>
                   </div>
 
-                  <div className="space-y-3">
-                    <Label className="text-sm font-semibold">Background Color</Label>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold">Background Color</Label>
                     <div className="grid grid-cols-9 gap-2">
-                      {colors.map((color) => (
+                      {trelloColors.map((color) => (
                         <button
                           key={color}
                           type="button"
-                          className={`h-11 w-11 rounded-lg transition-all hover:scale-110 shadow-md hover:shadow-lg ${
+                          className={`h-7 w-7 rounded-md transition-transform hover:scale-105 shadow-xs ${
                             formData.background_color === color
-                              ? 'ring-2 ring-primary ring-offset-2 scale-110'
-                              : 'hover:ring-2 hover:ring-muted-foreground/30'
+                              ? 'ring-2 ring-primary ring-offset-2 scale-105'
+                              : ''
                           }`}
                           style={{ backgroundColor: color }}
                           onClick={() => setFormData({ ...formData, background_color: color })}
@@ -462,51 +378,36 @@ export default function Dashboard({ statistics, recentBoards, recentCards, error
                     </div>
                   </div>
 
-                  <div className="flex gap-3 justify-end pt-6 border-t mt-6">
+                  <div className="flex gap-2 justify-end pt-3 border-t">
                     <Button
                       type="button"
                       variant="outline"
+                      size="sm"
                       onClick={() => setIsCreateDialogOpen(false)}
-                      className="h-11 hover:bg-muted transition-colors"
                       disabled={isLoading}
                     >
                       Cancel
                     </Button>
                     <Button
                       type="submit"
+                      size="sm"
                       disabled={isLoading}
-                      className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 h-11 px-6 shadow-lg hover:shadow-xl transition-all"
+                      className="bg-[#0052cc] hover:bg-[#0747a6] text-white"
                     >
-                      {isLoading ? (
-                        <span className="flex items-center gap-2">
-                          <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Creating...
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4" />
-                          Create Board
-                        </span>
-                      )}
+                      {isLoading ? 'Creating...' : 'Create'}
                     </Button>
                   </div>
                 </form>
               </DialogContent>
             </Dialog>
 
-            {/* Recent Boards */}
-            {recentBoards.map((board, index) => (
-              <motion.div
-                key={board.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: 0.4 + index * 0.1 }}
-              >
-              <Link href={`/boards/${board.id}`}>
-                <Card
-                  className="group cursor-pointer hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:scale-105 h-40 overflow-hidden border-0 shadow-md relative ring-2 ring-transparent hover:ring-primary/20"
+            {/* Board Tiles */}
+            {recentBoards.map((board) => (
+              <Link key={board.id} href={`/boards/${board.id}`} className="group block">
+                <div
+                  className="h-28 sm:h-32 rounded-xl p-3 flex flex-col justify-between relative overflow-hidden shadow-xs hover:shadow-md transition-all group-hover:opacity-95"
                   style={{
-                    backgroundColor: board.background_color,
+                    backgroundColor: board.background_color || '#0079bf',
                     backgroundImage: board.background_image
                       ? `url(/storage/${board.background_image})`
                       : undefined,
@@ -514,139 +415,107 @@ export default function Dashboard({ statistics, recentBoards, recentCards, error
                     backgroundPosition: 'center',
                   }}
                 >
-                  {/* Overlay for better text readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/20 group-hover:from-black/80 group-hover:via-black/50 group-hover:to-black/30 transition-all duration-300" />
-                  {/* Shimmer effect on hover */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                  {/* Subtle darkening overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/25 to-transparent pointer-events-none" />
+
+                  {/* Top Bar: Title & Owner badge */}
+                  <div className="relative z-10 flex items-start justify-between gap-1.5">
+                    <h3 className="font-bold text-white text-sm sm:text-base leading-snug line-clamp-2 drop-shadow-sm">
+                      {board.title}
+                    </h3>
+                    {board.is_owner && (
+                      <span className="px-1.5 py-0.5 rounded bg-black/30 backdrop-blur-xs text-white/90 text-[10px] font-medium shrink-0">
+                        Owner
+                      </span>
+                    )}
                   </div>
 
-                  <CardContent className="relative z-10 h-full flex flex-col justify-between pb-4 pt-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-bold text-white text-lg drop-shadow-lg line-clamp-2 flex-1">{board.title}</h3>
-                      {board.is_owner && (
-                        <Badge className="bg-yellow-500/90 text-white border-0 text-xs shadow-lg">
-                          Owner
-                        </Badge>
-                      )}
-                    </div>
-                    {board.description && (
-                      <p className="text-xs text-white/80 line-clamp-2 mt-1 drop-shadow">{board.description}</p>
-                    )}
-                    <div className="flex items-center justify-between mt-auto">
-                      <div className="flex items-center gap-3 text-xs text-white/90">
-                        <div className="flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          <span>{board.members?.length || 0}</span>
-                        </div>
-                        <div className="flex items-center gap-1" title={`Owner: ${board.owner.name}`}>
-                          <User className="h-3 w-3" />
-                          <span className="truncate max-w-[80px]">{board.owner.name}</span>
-                        </div>
+                  {/* Bottom Bar: Members and Action */}
+                  <div className="relative z-10 flex items-center justify-between text-white/90 text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 text-[11px]">
+                        <Users className="h-3 w-3" />
+                        <span>{board.members?.length || 1}</span>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                      <span className="text-[10px] opacity-75 truncate max-w-[100px]">
+                        {board.owner.name}
+                      </span>
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
-              </motion.div>
-            ))}
 
-            {recentBoards.length === 0 && (
-              <Card className="sm:col-span-2 lg:col-span-2 border-dashed border-2">
-                <CardContent className="flex flex-col items-center justify-center h-40 text-center">
-                  <Trello className="h-12 w-12 text-muted-foreground/50 mb-3" />
-                  <p className="text-sm text-muted-foreground mb-1">No boards yet</p>
-                  <p className="text-xs text-muted-foreground">Create your first board to get started!</p>
-                </CardContent>
-              </Card>
-            )}
+                    <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity translate-x-0 group-hover:translate-x-0.5" />
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Highlights & Recent Activity Feed (Trello Style) */}
         {recentCards.length > 0 && (
           <div>
-            <div className="flex items-center gap-2 mb-6">
-              <Clock className="h-6 w-6 text-primary" />
-              <div>
-                <h2 className="text-2xl font-bold">Recent Activity</h2>
-                <p className="text-sm text-muted-foreground">Your latest tasks and updates</p>
-              </div>
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
+                Highlights & Recent Tasks
+              </h2>
             </div>
-            <Card className="border-0 shadow-lg overflow-hidden">
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {recentCards.map((card, index) => (
-                    <motion.div
-                      key={card.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
+
+            <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden divide-y divide-border/60">
+              {recentCards.map((card) => (
+                <Link
+                  key={card.id}
+                  href={`/boards/${card.list.board.id}`}
+                  className="flex items-center justify-between p-3.5 hover:bg-muted/40 transition-colors text-xs sm:text-sm group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${
+                        card.is_completed
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                      }`}
                     >
-                    <Link
-                      href={`/boards/${card.list.board.id}`}
-                      className="group flex items-center justify-between p-5 hover:bg-gradient-to-r hover:from-primary/5 hover:to-purple-500/5 transition-all duration-300"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={`h-10 w-10 rounded-lg flex items-center justify-center shadow-sm ${
-                            card.is_completed
-                              ? 'bg-gradient-to-br from-green-400 to-emerald-500'
-                              : 'bg-gradient-to-br from-blue-400 to-cyan-500'
+                      <CheckSquare className="h-4 w-4" />
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`font-medium text-foreground truncate group-hover:text-primary transition-colors ${
+                            card.is_completed ? 'line-through text-muted-foreground' : ''
                           }`}
                         >
-                          <CheckSquare className="h-5 w-5 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold group-hover:text-primary transition-colors truncate">{card.title}</p>
-                            {!card.is_creator && (
-                              <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 text-xs shrink-0">
-                                <UserPlus className="h-3 w-3 mr-1" />
-                                Assigned
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <Badge variant="outline" className="text-xs">
-                              {card.list.title}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">•</span>
-                            <span className="text-xs text-muted-foreground truncate">{card.list.board.title}</span>
-                          </div>
-                        </div>
+                          {card.title}
+                        </span>
+                        {!card.is_creator && (
+                          <Badge variant="outline" className="text-[10px] py-0 px-1 font-normal">
+                            Assigned
+                          </Badge>
+                        )}
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
-                          {new Date(card.created_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </div>
-                        <ArrowRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                          {card.list.board.title}
+                        </span>
+                        <span>•</span>
+                        <span>{card.list.title}</span>
                       </div>
-                    </Link>
-                    </motion.div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+                    </div>
+                  </div>
 
-        {/* Empty State for Activity */}
-        {recentCards.length === 0 && (
-          <Card className="border-dashed border-2">
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center mb-4">
-                <Clock className="h-8 w-8 text-muted-foreground/50" />
-              </div>
-              <h3 className="font-semibold text-lg mb-1">No recent activity</h3>
-              <p className="text-sm text-muted-foreground">Start creating cards to see your activity here</p>
-            </CardContent>
-          </Card>
+                  <div className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground ml-2">
+                    <span className="hidden sm:inline">
+                      {new Date(card.created_at).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                    </span>
+                    <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </AppLayout>

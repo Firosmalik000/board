@@ -2,6 +2,7 @@
 // Default exports
 export { default as AppLogo } from './app-logo'
 export { default as AppLogoIcon } from './app-logo-icon'
+export { BrandLogo, default as BrandLogoDefault } from './brand-logo'
 export { default as Heading } from './heading'
 export { default as HeadingSmall } from './heading-small'
 export { default as TextLink } from './text-link'

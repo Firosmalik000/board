@@ -60,27 +60,6 @@ export function useCardModal() {
     // Don't process if already saving (prevent double save)
     if (isSaving) return
 
-    // For create mode: just close without saving (saving handled by button only)
-    if (cardMode === 'create') {
-      // Discard the draft
-      setSelectedCardId(null)
-      setSelectedCard(null)
-      setCardMode('view')
-      setCreateInListId(null)
-      setNewComment('')
-      setHasChanges(false)
-      setPendingFiles([])
-      setPendingChecklists([])
-      return
-    }
-
-    // For edit mode: warn if there are unsaved changes
-    if (hasChanges && cardMode === 'view') {
-      if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
-        return
-      }
-    }
-
     setSelectedCardId(null)
     setSelectedCard(null)
     setCardMode('view')
@@ -238,6 +217,7 @@ export function useCardModal() {
           onSuccess: () => {
             toast.success('Card updated successfully')
             setHasChanges(false)
+            resetCardModal()
           },
           onError: () => {
             toast.error('Failed to update card')
@@ -355,6 +335,10 @@ export function useCardModal() {
         toast.error('Failed to delete attachment')
       },
     })
+  }
+
+  const handleAddPendingFile = (file: File) => {
+    setPendingFiles(prev => [...prev, file])
   }
 
   const handleRemovePendingFile = (index: number) => {
@@ -479,6 +463,7 @@ export function useCardModal() {
     handleAddComment,
     handleFileUpload,
     handleDeleteAttachment,
+    handleAddPendingFile,
     handleRemovePendingFile,
     handleAddPendingChecklist,
     handleRemovePendingChecklist,

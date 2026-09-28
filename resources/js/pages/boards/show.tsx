@@ -43,6 +43,7 @@ export default function BoardShow({ board: initialBoard, activities, totalActivi
     handleAddComment,
     handleFileUpload,
     handleDeleteAttachment,
+    handleAddPendingFile,
     handleRemovePendingFile,
     handleAddPendingChecklist,
     handleRemovePendingChecklist,
@@ -169,6 +170,7 @@ export default function BoardShow({ board: initialBoard, activities, totalActivi
         isUploadingFile={isUploadingFile}
         isSaving={isSaving}
         pendingFiles={pendingFiles}
+        onAddPendingFile={handleAddPendingFile}
         pendingChecklists={pendingChecklists}
         onAddPendingChecklist={handleAddPendingChecklist}
         onRemovePendingChecklist={handleRemovePendingChecklist}
