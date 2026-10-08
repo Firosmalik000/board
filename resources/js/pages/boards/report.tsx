@@ -262,7 +262,7 @@ export default function BoardReport({
         });
 
         return Array.from(map.values()).sort((a, b) => b.assigned - a.assigned);
-    }, [board.members, filteredCards]);
+    }, [board.members, filteredCards, now]);
 
     // Grouped cards by list (for detailed PDF and structured view)
     const cardsGroupedByList = useMemo(() => {
@@ -1263,18 +1263,18 @@ export default function BoardReport({
                                                                             key={item.id}
                                                                             className={`flex items-center gap-1.5 ${
                                                                                 item.is_completed
-                                                                                    ? 'text-muted-foreground line-through'
+                                                                                    ? 'text-emerald-700 dark:text-emerald-400 font-medium'
                                                                                     : 'text-foreground'
                                                                             }`}
                                                                         >
                                                                             <span
                                                                                 className={`text-[10px] font-bold ${
                                                                                     item.is_completed
-                                                                                        ? 'text-emerald-600'
+                                                                                        ? 'text-emerald-600 dark:text-emerald-400'
                                                                                         : 'text-slate-400'
                                                                                 }`}
                                                                             >
-                                                                                {item.is_completed ? '☑' : '☐'}
+                                                                                {item.is_completed ? '✓' : '☐'}
                                                                             </span>
                                                                             <span className="truncate">{item.title}</span>
                                                                         </div>
