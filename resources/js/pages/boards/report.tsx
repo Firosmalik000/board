@@ -308,8 +308,23 @@ export default function BoardReport({
         }
     };
 
-    // Dedicated Standalone PDF Template Generator (Clean, Table-based, Printable)
+    // Dedicated PDF Download via Backend Service & Blade Template
     const handleExportPDF = () => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if (selectedMember && selectedMember !== 'all') {
+            params.append('member', selectedMember);
+        }
+        if (period === 'custom') {
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+        }
+
+        const downloadUrl = `/boards/${board.id}/report/pdf?${params.toString()}`;
+        window.location.href = downloadUrl;
+    };
+
+    const handlePrintClientWindow = () => {
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
             window.print();

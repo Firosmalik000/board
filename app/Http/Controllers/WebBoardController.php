@@ -191,6 +191,19 @@ class WebBoardController extends Controller
     }
 
     /**
+     * Download board report as PDF via backend service & Blade template.
+     */
+    public function downloadReportPdf(Request $request, Board $board, \App\Services\BoardReportPdfService $pdfService)
+    {
+        // Check if user has access
+        if (!$board->hasMember($request->user())) {
+            abort(403, 'Unauthorized to access this board.');
+        }
+
+        return $pdfService->generate($board, $request);
+    }
+
+    /**
      * Update a board.
      */
     public function update(Request $request, Board $board)

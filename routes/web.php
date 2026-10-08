@@ -184,6 +184,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('boards', [WebBoardController::class, 'store'])->name('boards.store');
     Route::get('boards/{board}', [WebBoardController::class, 'show'])->name('boards.show');
     Route::get('boards/{board}/report', [WebBoardController::class, 'report'])->name('boards.report');
+    Route::get('boards/{board}/report/pdf', [WebBoardController::class, 'downloadReportPdf'])->name('boards.report.pdf');
     Route::patch('boards/{board}', [WebBoardController::class, 'update'])->name('boards.update');
     Route::delete('boards/{board}', [WebBoardController::class, 'destroy'])->name('boards.destroy');
     Route::post('boards/{board}/background-image', [WebBoardController::class, 'uploadBackgroundImage'])->name('boards.background.upload');
