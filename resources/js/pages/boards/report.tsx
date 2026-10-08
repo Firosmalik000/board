@@ -19,17 +19,22 @@ import {
     endOfMonth,
     endOfWeek,
     format,
+    isAfter,
+    isBefore,
     isThisMonth,
     isThisWeek,
     isToday,
     parseISO,
+    startOfDay,
     startOfMonth,
     startOfWeek,
+    subMonths,
 } from 'date-fns';
 import { id } from 'date-fns/locale';
 import {
     AlertTriangle,
     ArrowLeft,
+    Calendar,
     CheckCircle2,
     CheckSquare,
     Clock,
@@ -40,6 +45,7 @@ import {
     Paperclip,
     Search,
     Users,
+    X,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
@@ -63,7 +69,7 @@ interface BoardReportProps {
     activities: ActivityItem[];
 }
 
-type PeriodFilter = 'all' | 'today' | 'week' | 'month';
+type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'last3months' | 'custom';
 
 // Helper to strip rich text HTML tags and entities so raw <p> tags don't leak into the report
 const stripHtml = (html?: string | null): string => {
@@ -88,6 +94,8 @@ export default function BoardReport({
     const [selectedMember, setSelectedMember] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<'grouped' | 'table'>('grouped');
+    const [dateFrom, setDateFrom] = useState<string>('');
+    const [dateTo, setDateTo] = useState<string>('');
 
     const currentDateFormatted = format(new Date(), 'dd MMMM yyyy', { locale: id });
 
@@ -123,27 +131,34 @@ export default function BoardReport({
     const filteredCards = useMemo(() => {
         return allCards.filter((card) => {
             // 1. Period filter
-            if (period !== 'all') {
-                const dateToEvaluate =
-                    card.created_at || (card as any).updated_at;
-                if (dateToEvaluate) {
-                    try {
-                        const cardDate =
-                            typeof dateToEvaluate === 'string'
-                                ? parseISO(dateToEvaluate)
-                                : new Date(dateToEvaluate);
-                        if (period === 'today' && !isToday(cardDate))
-                            return false;
-                        if (
-                            period === 'week' &&
-                            !isThisWeek(cardDate, { weekStartsOn: 1 })
-                        )
-                            return false;
-                        if (period === 'month' && !isThisMonth(cardDate))
-                            return false;
-                    } catch (_e) {
-                        // fallback
+            const dateToEvaluate = card.created_at || (card as any).updated_at;
+            if (period !== 'all' && dateToEvaluate) {
+                try {
+                    const cardDate =
+                        typeof dateToEvaluate === 'string'
+                            ? parseISO(dateToEvaluate)
+                            : new Date(dateToEvaluate);
+
+                    if (period === 'today' && !isToday(cardDate)) return false;
+                    if (period === 'week' && !isThisWeek(cardDate, { weekStartsOn: 1 })) return false;
+                    if (period === 'month' && !isThisMonth(cardDate)) return false;
+                    if (period === 'last3months') {
+                        const threeMonthsAgo = startOfDay(subMonths(new Date(), 3));
+                        if (isBefore(cardDate, threeMonthsAgo)) return false;
                     }
+                    if (period === 'custom') {
+                        if (dateFrom) {
+                            const from = startOfDay(parseISO(dateFrom));
+                            if (isBefore(cardDate, from)) return false;
+                        }
+                        if (dateTo) {
+                            const to = new Date(dateTo);
+                            to.setHours(23, 59, 59, 999);
+                            if (isAfter(cardDate, to)) return false;
+                        }
+                    }
+                } catch (_e) {
+                    // fallback
                 }
             }
 
@@ -169,7 +184,8 @@ export default function BoardReport({
 
             return true;
         });
-    }, [allCards, period, selectedMember, searchQuery]);
+    }, [allCards, period, selectedMember, searchQuery, dateFrom, dateTo]);
+
 
     // KPIs
     const totalCardsCount = filteredCards.length;
@@ -262,25 +278,33 @@ export default function BoardReport({
         });
     }, [board.lists, filteredCards]);
 
-    // Exact period label with date range as requested:
-    // "xbayar report tanggal berapa dan berapa"
+    // Exact period label with date range
     const getPeriodFormattedRange = (p: PeriodFilter) => {
         const today = new Date();
         switch (p) {
             case 'today':
-                return `Tanggal: ${format(today, 'dd MMMM yyyy')}`;
+                return `Tanggal: ${format(today, 'dd MMMM yyyy', { locale: id })}`;
             case 'week': {
                 const start = startOfWeek(today, { weekStartsOn: 1 });
                 const end = endOfWeek(today, { weekStartsOn: 1 });
-                return `Periode: ${format(start, 'dd MMMM yyyy')} s/d ${format(end, 'dd MMMM yyyy')}`;
+                return `Periode: ${format(start, 'dd MMM yyyy', { locale: id })} – ${format(end, 'dd MMM yyyy', { locale: id })}`;
             }
             case 'month': {
                 const start = startOfMonth(today);
                 const end = endOfMonth(today);
-                return `Periode: ${format(start, 'dd MMMM yyyy')} s/d ${format(end, 'dd MMMM yyyy')}`;
+                return `Periode: ${format(start, 'dd MMM yyyy', { locale: id })} – ${format(end, 'dd MMM yyyy', { locale: id })}`;
+            }
+            case 'last3months': {
+                const start = startOfDay(subMonths(today, 3));
+                return `Periode: ${format(start, 'dd MMM yyyy', { locale: id })} – ${format(today, 'dd MMM yyyy', { locale: id })} (3 Bulan Terakhir)`;
+            }
+            case 'custom': {
+                const fromLabel = dateFrom ? format(parseISO(dateFrom), 'dd MMM yyyy', { locale: id }) : '...';
+                const toLabel = dateTo ? format(parseISO(dateTo), 'dd MMM yyyy', { locale: id }) : '...';
+                return `Rentang Kustom: ${fromLabel} – ${toLabel}`;
             }
             default:
-                return `Periode: Semua Waktu (Dicetak: ${format(today, 'dd MMMM yyyy')})`;
+                return `Periode: Semua Waktu (Dicetak: ${format(today, 'dd MMM yyyy', { locale: id })})`;
         }
     };
 
@@ -300,45 +324,54 @@ export default function BoardReport({
                     new Date(card.due_date) < now;
                 const listName =
                     board.lists?.find((l) => l.id === card.board_list_id)?.title ||
-                    '-';
+                    card.listTitle || '-';
                 const cleanDesc = stripHtml(card.description);
                 const picNames =
                     card.members?.map((m: any) => m.name).join(', ') || '-';
                 const formattedDate = card.due_date
-                    ? format(new Date(card.due_date), 'dd MMM yyyy')
+                    ? format(new Date(card.due_date), 'dd MMM yyyy', { locale: id })
                     : '-';
                 const statusBadge = card.is_completed
-                    ? '<span class="badge badge-success">Selesai</span>'
+                    ? '<span class="badge badge-success">✓ Selesai</span>'
                     : isOverdue
-                      ? '<span class="badge badge-danger">Overdue</span>'
-                      : '<span class="badge badge-info">Berjalan</span>';
+                      ? '<span class="badge badge-danger">⚠ Overdue</span>'
+                      : '<span class="badge badge-info">● Berjalan</span>';
 
                 // Sub-task Checklists HTML inside PDF table
+                // Note: done items use green checkmark WITHOUT strikethrough (strikethrough is confusing)
                 let checklistHtml = '';
                 if (card.checklists && card.checklists.length > 0) {
                     const completed = card.checklists.filter((i: any) => i.is_completed).length;
                     const items = card.checklists
                         .map(
                             (item: any) =>
-                                `<div class="checklist-item ${item.is_completed ? 'done' : ''}">
-                                    <span class="chk-box">${item.is_completed ? '☑' : '☐'}</span>
-                                    <span>${item.title}</span>
-                                </div>`,
+                                item.is_completed
+                                    ? `<div class="checklist-item done">
+                                        <span class="chk-done">✓</span>
+                                        <span class="chk-done-text">${item.title}</span>
+                                       </div>`
+                                    : `<div class="checklist-item">
+                                        <span class="chk-box">☐</span>
+                                        <span>${item.title}</span>
+                                       </div>`,
                         )
                         .join('');
                     checklistHtml = `
                         <div class="checklist-box">
-                            <div class="checklist-title">Checklist (${completed}/${card.checklists.length}):</div>
+                            <div class="checklist-title">Sub-task Checklist (${completed}/${card.checklists.length} selesai):</div>
                             <div class="checklist-items">${items}</div>
                         </div>
                     `;
                 }
 
+                // Card title: no strikethrough — status badge already indicates completed
+                const titleColor = card.is_completed ? '#64748b' : '#0f172a';
+
                 return `
-                    <tr>
+                    <tr${card.is_completed ? ' class="row-done"' : ''}>
                         <td style="text-align:center;font-weight:600;color:#64748b;">${idx + 1}</td>
                         <td>
-                            <div style="font-weight:700;font-size:11px;color:${card.is_completed ? '#64748b;text-decoration:line-through;' : '#0f172a;'}">${card.title}</div>
+                            <div style="font-weight:700;font-size:11px;color:${titleColor};">${card.title}</div>
                             ${cleanDesc ? `<div style="color:#64748b;font-size:10px;margin-top:2px;line-height:1.35;">${cleanDesc}</div>` : ''}
                             ${checklistHtml}
                         </td>
@@ -350,6 +383,7 @@ export default function BoardReport({
                 `;
             })
             .join('');
+
 
         const html = `<!DOCTYPE html>
 <html lang="id">
@@ -508,8 +542,16 @@ export default function BoardReport({
             gap: 4px;
         }
         .checklist-item.done {
-            text-decoration: line-through;
-            color: #94a3b8;
+            color: #15803d;
+        }
+        .chk-done {
+            font-weight: 800;
+            font-size: 10px;
+            color: #15803d;
+        }
+        .chk-done-text {
+            color: #15803d;
+            font-weight: 500;
         }
         .chk-box {
             font-weight: bold;
@@ -751,13 +793,15 @@ export default function BoardReport({
                         </span>
 
                         {/* Period Segmented Buttons */}
-                        <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
+                        <div className="inline-flex flex-wrap gap-0.5 rounded-lg border border-border bg-muted/40 p-1">
                             {(
                                 [
                                     { id: 'today', label: 'Harian' },
                                     { id: 'week', label: 'Mingguan' },
                                     { id: 'month', label: 'Bulanan' },
+                                    { id: 'last3months', label: '3 Bulan' },
                                     { id: 'all', label: 'Semua' },
+                                    { id: 'custom', label: 'Rentang' },
                                 ] as const
                             ).map((tab) => (
                                 <button
@@ -769,10 +813,43 @@ export default function BoardReport({
                                             : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                 >
+                                    {tab.id === 'custom' && <Calendar className="mr-1 inline h-3 w-3" />}
                                     {tab.label}
                                 </button>
                             ))}
                         </div>
+
+                        {/* Custom Date Range Inputs */}
+                        {period === 'custom' && (
+                            <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5">
+                                <Calendar className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                <input
+                                    type="date"
+                                    value={dateFrom}
+                                    onChange={(e) => setDateFrom(e.target.value)}
+                                    className="border-0 bg-transparent text-xs text-foreground outline-none"
+                                    title="Dari tanggal"
+                                />
+                                <span className="text-xs text-muted-foreground">–</span>
+                                <input
+                                    type="date"
+                                    value={dateTo}
+                                    onChange={(e) => setDateTo(e.target.value)}
+                                    className="border-0 bg-transparent text-xs text-foreground outline-none"
+                                    title="Sampai tanggal"
+                                />
+                                {(dateFrom || dateTo) && (
+                                    <button
+                                        onClick={() => { setDateFrom(''); setDateTo(''); }}
+                                        className="text-muted-foreground hover:text-foreground"
+                                        title="Reset rentang"
+                                    >
+                                        <X className="h-3.5 w-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
 
                         {/* View Mode Toggle */}
                         <div className="ml-2 inline-flex rounded-lg border border-border bg-muted/40 p-1">
